@@ -11,7 +11,7 @@
 
 
 int main(int argc, char * argv[]) {
-    std::string gfa_filename,bubble_contigs_filename,output_prefix, reads1,reads2;
+    std::string gfa_filename,output_prefix, reads1,reads2;
     std::vector<std::string>  dump_mapped, load_mapped;
     uint64_t max_mem_gb=4;
     bool stats_only=0;
@@ -23,7 +23,6 @@ int main(int argc, char * argv[]) {
         options.add_options()
                 ("help", "Print help")
                 ("g,gfa", "input gfa file", cxxopts::value<std::string>(gfa_filename))
-                ("c,contigs", "Bubble contigs to phase", cxxopts::value<std::string>(bubble_contigs_filename))
                 ("o,output", "output file prefix", cxxopts::value<std::string>(output_prefix));
         options.add_options("Paired reads options")
                 ("1,read1", "input reads, left", cxxopts::value<std::string>(reads1))
@@ -41,7 +40,7 @@ int main(int argc, char * argv[]) {
             exit(0);
         }
 
-        if (result.count("g")!=1 or result.count("o")!=1 or result.count("c") != 1) {
+        if (result.count("g")!=1 or result.count("o")!=1) {
             throw cxxopts::OptionException(" please specify input files and output prefix");
         }
         if (result.count("1")!=1 or result.count("2")!=1) {
@@ -71,11 +70,15 @@ int main(int argc, char * argv[]) {
     max_mem_gb *= GB;
     SequenceGraph sg;
 
-
+    std::string to_map = "";
+    if (dump_mapped.size() != 0){
+        std::cout << dump_mapped.size() << dump_mapped[0].size() << dump_mapped[0] << std::endl;
+        to_map = dump_mapped[0];
+    }
     sg.load_from_gfa(gfa_filename);
     PhaseScaffolder ps = PhaseScaffolder(sg);
        auto fasta_filename=gfa_filename.substr(0,gfa_filename.size()-4)+".fasta";
-        ps.load_mappings(reads1, reads2, fasta_filename, max_mem_gb);
+        ps.load_mappings(reads1, reads2, fasta_filename, max_mem_gb, to_map);
         ps.phase_components();
 
 

@@ -118,11 +118,6 @@ std::vector<std::vector<sgNodeID_t >> SequenceGraph::find_bubbles(std::vector<sg
                     links_set.insert(link);
                 }
             }
-            /*for (auto u:  links_uniq){
-                //std::cout << oldnames[u.source] << " " << oldnames[u.dest] << " \n";
-                std::cout << u.source << " " << u.dest << " \n";
-            }
-            std::cout << "\nlinks unique: " << links_uniq.size() << " links set " << links_set.size() << std::endl;*/
             // if l has exactly 2 links, one source and one dest, it may be a bubble
             if (links_uniq.size() == 2) {
                 std::vector<sgNodeID_t> linked_to;
@@ -181,12 +176,7 @@ std::vector<std::vector<sgNodeID_t >> SequenceGraph::find_bubbles(std::vector<sg
 
                 }
 
-/*for (auto link2:linked_2nd_degree){
-
-    auto s = link2.first > 0 ? link2.first:-link2.first;
-    std::cout << "2nd degree l: " << oldnames[s] << " " << link2.second << " l first: " << link2.first << std::endl;
-}*/
-                    // if n is a bubble, other bubble contigs will share source and dest
+               // if n is a bubble, other bubble contigs will share source and dest
                     // nope... but each bubble contig should occur twice...
 
 

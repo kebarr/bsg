@@ -9,10 +9,14 @@
 PhaseScaffolder::PhaseScaffolder(SequenceGraph & sg): sg(sg), mapper(sg){
 }
 
-void PhaseScaffolder::load_mappings(std::string r1_filename, std::string r2_filename, std::string fasta_filename, uint64_t max_mem_gb){
+void PhaseScaffolder::load_mappings(std::string r1_filename, std::string r2_filename, std::string fasta_filename, uint64_t max_mem_gb, std::string to_map=""){
 
     mapper.map_reads(r1_filename, r2_filename, fasta_filename, prm10x, max_mem_gb);
     std::cout << "Mapped " << mapper.read_to_node.size() << " reads to " <<  mapper.reads_in_node.size() << "nodes" << std::endl;
+    if (to_map.size()>0){
+        std::cout << "Writting mappings to disk" << std::endl;
+        mapper.save_to_disk(to_map);
+    }
 }
 
 
@@ -29,28 +33,7 @@ void PhaseScaffolder::output_bubbles(std::string bubble_filename) {
     for (auto component:components) {
         if (component.size() >= 6) {
             auto bubbles = sg.find_bubbles(component);
-            /*if (component.size() > 6){
-                auto name = "component" + std::to_string(counter) + ".gfa";
-                std::ofstream out(name);
-                out << "H\tVN:Z:1.0"<<std::endl;
-                for (sgNodeID_t n:component){
-                    out<<"S\tseq"<<n<<"\t*\tLN:i:"<<sg.nodes[n].sequence.size()<<"\tUR:Z:"<< sg.nodes[n].sequence <<std::endl;
-                }
 
-                for ( sgNodeID_t n:component){
-                    for (auto &l:sg.links[n])
-                        if (l.source<=l.dest) {
-                            out<<"L\t";
-                            if (l.source>0) out<<"seq"<<l.source<<"\t-\t";
-                            else out<<"seq"<<-l.source<<"\t+\t";
-                            if (l.dest>0) out<<"seq"<<l.dest<<"\t+\t";
-                            else out<<"seq"<<-l.dest<<"\t-\t";
-                            out<<(l.dist<0 ? -l.dist : 0)<<"M"<<std::endl;
-                        }
-                }
-            }*/
-            //std::cout << "Component with " << component.size() << " nodes " << bubbles.size() << " bubbles "
-              //        << std::endl;
             if (bubbles.size() > 1) {
                 counter2+=1;
                 for (auto bubble:bubbles) {
@@ -79,9 +62,18 @@ void PhaseScaffolder::phase_components() {
     for (auto component:components) {
         HaplotypeScorer hs;
         if (component.size() >= 6) {
-
+        /*    for (auto c:component){
+                std::cout << sg.oldnames[c] << " ";
+            }
+std::cout << std::endl;*/
 // should
             auto bubbles = sg.find_bubbles(component);
+            /*for (auto b: bubbles){
+                for (auto c:b){
+                    std::cout << sg.oldnames[c] << " ";
+                }
+                std::cout << std::endl;
+            }*/
             hs.find_possible_haplotypes(bubbles);
             std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
 
