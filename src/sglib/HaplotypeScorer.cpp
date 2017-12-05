@@ -51,7 +51,9 @@ void HaplotypeScorer::decide_barcode_haplotype_support(){
     int haplotypes_supported = 0;
 
     std::cout << "Calculating barcode haplotype" <<std::endl;
+    std::ofstream barcodes1("barcodes_unfiltered.txt");
     for (auto &mapping:barcode_node_mappings) {
+        barcodes1 << mapping.first << std::endl;
         if (mapping.second.size() > 1) {
             std::vector<sgNodeID_t> nodes;
             std::vector<int> scores;
@@ -91,8 +93,22 @@ void HaplotypeScorer::decide_barcode_haplotype_support(){
 
     }
 
-
-    std::cout << "Calculated haplotype support for each barcode, " << barcode_haplotype_mappings.size() <<  std::endl;
+    barcodes1 << "----------------------------------------------------\n";
+    barcodes1 << "----------------------------------------------------\n";
+    barcodes1 << "----------------------------------------------------\n";
+    int count1 = 0;
+    for (auto barcode:barcode_node_mappings){
+        barcodes1 << barcode.first << " \n";
+        count1++;
+    }
+    std::ofstream barcodes2("barcodes_filtered.tct");
+    int count2 = 0;
+    for (auto barcode:barcode_haplotype_mappings){
+        barcodes2 << barcode.first << " \n";
+        count2++;
+    }
+    std::cout << count1 << " " << count2 << std::endl;
+              std::cout << "Calculated haplotype support for each barcode, " << barcode_haplotype_mappings.size() <<  std::endl;
 
 }
 
@@ -108,10 +124,8 @@ void HaplotypeScorer::decide_barcode_haplotype_support(){
  *
  */
 void HaplotypeScorer::count_barcode_votes(PairedReadMapper & mapper){
-    std::cout << "Mapped " << mapper.read_to_node.size() << " reads to " <<  mapper.reads_in_node.size() << "nodes" << std::endl;
+    std::cout << "Mapped " << mapper.read_to_node.size() << " reads to " <<  mapper.reads_in_node.size() << " nodes" << std::endl;
     std::cout << "NOw counting barcode votes... " << std::endl;
-    std::cout << "Haplotype nodes size: " << haplotype_nodes.size() << std::endl;
-    std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() <<std::endl;
     int counter = 0;
     for (auto r: mapper.reads_in_node){
         counter += 1;
@@ -123,7 +137,7 @@ void HaplotypeScorer::count_barcode_votes(PairedReadMapper & mapper){
             counter += 1;
         }
     }
-    std::cout << "counted " << counter << " votes for " << barcode_node_mappings.size() << "barcodes";
+    std::cout << "counted " << counter << " votes for " << barcode_node_mappings.size() << "barcodes" << std::endl;
 };
 
 /**
@@ -187,7 +201,7 @@ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames) {
             }
         }
     }
-    analyse_scores(oldnames, haplotype_support, haplotype_not_support, haplotype_overall_support, hap_pair_support,hap_pair_not_support, hap_pair_support_total_score );
+    //analyse_scores(oldnames, haplotype_support, haplotype_not_support, haplotype_overall_support, hap_pair_support,hap_pair_not_support, hap_pair_support_total_score );
 
     auto support_max_index = std::distance(haplotype_support.begin(), std::max_element (haplotype_support.begin(),haplotype_support.end()));
     auto overall_support_max_index = std::distance(haplotype_overall_support.begin(), std::max_element (haplotype_overall_support.begin(),haplotype_overall_support.end()));
@@ -493,7 +507,6 @@ void HaplotypeScorer::find_possible_haplotypes(std::vector<std::vector<sgNodeID_
     }
     std::cout << haplotype_ids.size() << " haplotypes  generated " << std::endl;
 
-    std::cout << "Haplotype nodes size: " << haplotype_nodes.size() << std::endl;
 
     this->haplotype_nodes = haplotype_nodes;
     std::cout << "Haplotype nodes size: " << haplotype_nodes.size() << std::endl;
