@@ -76,69 +76,84 @@ void PhaseScaffolder::phase_components() {
     int phaseable = 0;
     int not_phaseable = 0;
     int phased = 0;
-    std::vector<sgNodeID_t > to_check = {sg.oldnames_to_ids["448660"], sg.oldnames_to_ids["461782"], sg.oldnames_to_ids["468510"], sg.oldnames_to_ids["510080"],
-                                         sg.oldnames_to_ids["514764"], sg.oldnames_to_ids["843062"], sg.oldnames_to_ids["437632"], sg.oldnames_to_ids["440422"],
-                                         sg.oldnames_to_ids["448660"], sg.oldnames_to_ids["437440"], sg.oldnames_to_ids["417378"], sg.oldnames_to_ids["413884"],
-                                         sg.oldnames_to_ids["411428"], sg.oldnames_to_ids["402916"]};
-    std::vector<std::pair <size_t , size_t > > comp_sizes;
+    std::vector<sgNodeID_t> to_check = {sg.oldnames_to_ids["448660"], sg.oldnames_to_ids["461782"],
+                                        sg.oldnames_to_ids["468510"], sg.oldnames_to_ids["510080"],
+                                        sg.oldnames_to_ids["514764"], sg.oldnames_to_ids["843062"],
+                                        sg.oldnames_to_ids["437632"], sg.oldnames_to_ids["440422"],
+                                        sg.oldnames_to_ids["448660"], sg.oldnames_to_ids["437440"],
+                                        sg.oldnames_to_ids["417378"], sg.oldnames_to_ids["413884"],
+                                        sg.oldnames_to_ids["411428"], sg.oldnames_to_ids["402916"]};
+    std::vector<std::pair<size_t, size_t> > comp_sizes;
     std::ofstream o("previously_solved_contig_names.txt");
 // this finds 2 components for test graph...
     std::cout << "Found " << components.size() << " connected components " << std::endl;
     for (auto component:components) {
 
-            /*for (auto n:component) {
-                if (std::find(to_check.begin(), to_check.end(), n) != to_check.end()) {
-                    std::cout << "Checking previously solved component \n";
+        /*for (auto n:component) {
+            if (std::find(to_check.begin(), to_check.end(), n) != to_check.end()) {
+                std::cout << "Checking previously solved component \n";
 
-                    o << n << std::endl;*/
+                o << n << std::endl;*/
 
-            // input for other version at:  to_look_at/subgraph_names.txt
-            HaplotypeScorer hs;
-            auto size = component_bps(this->sg, component);
-            comp_sizes.push_back(std::make_pair(size, component.size()));
-            if (component.size() >= 6) {
-                // part of the issue may be barcodes not covering the entire component
-                /*    for (auto c:component){
-                        std::cout << sg.oldnames[c] << " ";
-                    }
-        std::cout << std::endl;*/
-// should
-                auto bubbles = sg.find_bubbles(component);
-                if (bubbles.size() > 1) {
-                    if (bubbles.size() <= 20) {
-                        phaseable += 1;
-                        hs.find_possible_haplotypes(bubbles);
-                        std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
-
-                        hs.count_barcode_votes(mapper);
-                        hs.decide_barcode_haplotype_support();
-// now have mappings and barcode support
-                        if (hs.barcode_haplotype_mappings.size() > 0) {
-                            int p = hs.score_haplotypes(sg.oldnames);
-                            std::cout << "scored haplotypes " << p << std::endl;
-                            phased += p;
-                        }
-
-                    } else {
-                        too_large += 1;
-                        // TODO output these and work out how to split up sensibly
-                    }
-                } else {
-                    not_phaseable += 1;
+        // input for other version at:  to_look_at/subgraph_names.txt
+        HaplotypeScorer hs;
+        auto size = component_bps(this->sg, component);
+        comp_sizes.push_back(std::make_pair(size, component.size()));
+        if (component.size() >= 6) {
+            // part of the issue may be barcodes not covering the entire component
+            /*    for (auto c:component){
+                    std::cout << sg.oldnames[c] << " ";
                 }
+    std::cout << std::endl;*/
+// should
+            auto bubbles = sg.find_bubbles(component);
+            if (bubbles.size() > 1) {
+                if (bubbles.size() <= 20) {
+                    phaseable += 1;
+                    hs.find_possible_haplotypes(bubbles);
+                    std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
+
+                    hs.count_barcode_votes(mapper);
+                    hs.decide_barcode_haplotype_support();
+// now have mappings and barcode support
+                    if (hs.barcode_haplotype_mappings.size() > 0) {
+                        int p = hs.score_haplotypes(sg.oldnames);
+                        std::cout << "scored haplotypes " << p << std::endl;
+                        phased += p;
+                    }
+
+                } else {
+                    too_large += 1;
+                    // TODO output these and work out how to split up sensibly
+                }
+            } else {
+                not_phaseable += 1;
             }
         }
-          //  }
+    }
+    //  }
     //}
 
-    std::cout << "Phased " << phased << " of " << phaseable << " phaseable components, " << too_large << " were too large " << " and " << not_phaseable << " did not contain enough bubbles" << std::endl;
+    std::cout << "Phased " << phased << " of " << phaseable << " phaseable components, " << too_large
+              << " were too large " << " and " << not_phaseable << " did not contain enough bubbles" << std::endl;
     std::cout << "component sizes \n";
-              int i = 0;
-    for (auto c:comp_sizes){
-        std::cout << std::get<0>(c) << ": " << std::get<1>(c) << "  ";
-        i++;
-        if (i%100 == 0){
-            std::cout << std::endl;
+    int i = 0;
+    std::vector<size_t> single_contig_comps;
+    for (auto c:comp_sizes) {
+        if (std::get<1>(c) > 1) {
+            std::cout << std::get<0>(c) << ": " << std::get<1>(c) << "  ";
+            i++;
+            if (i % 100 == 0) {
+                std::cout << std::endl;
+            }
+        } else {
+            single_contig_comps.push_back(std::get<0>(c));
         }
     }
+    std::cout << single_contig_comps.size() << " components with single contig, max bps ";
+    if (single_contig_comps.size() > 0) {
+        std::cout <<  *std::max_element(single_contig_comps.begin(), single_contig_comps.end()) << " min size: " << *std::min_element(
+                single_contig_comps.begin(), single_contig_comps.end()) << std::endl;
+    }
+    std::cout << std::endl;
 }

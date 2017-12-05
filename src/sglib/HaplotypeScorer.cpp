@@ -49,11 +49,7 @@ void HaplotypeScorer::decide_barcode_haplotype_support(){
 
     int support;
     int haplotypes_supported = 0;
-
-    std::cout << "Calculating barcode haplotype" <<std::endl;
-    std::ofstream barcodes1("barcodes_unfiltered.txt");
     for (auto &mapping:barcode_node_mappings) {
-        barcodes1 << mapping.first << std::endl;
         if (mapping.second.size() > 1) {
             std::vector<sgNodeID_t> nodes;
             std::vector<int> scores;
@@ -93,22 +89,7 @@ void HaplotypeScorer::decide_barcode_haplotype_support(){
 
     }
 
-    barcodes1 << "----------------------------------------------------\n";
-    barcodes1 << "----------------------------------------------------\n";
-    barcodes1 << "----------------------------------------------------\n";
-    int count1 = 0;
-    for (auto barcode:barcode_node_mappings){
-        barcodes1 << barcode.first << " \n";
-        count1++;
-    }
-    std::ofstream barcodes2("barcodes_filtered.tct");
-    int count2 = 0;
-    for (auto barcode:barcode_haplotype_mappings){
-        barcodes2 << barcode.first << " \n";
-        count2++;
-    }
-    std::cout << count1 << " " << count2 << std::endl;
-              std::cout << "Calculated haplotype support for each barcode, " << barcode_haplotype_mappings.size() <<  std::endl;
+    std::cout << "Calculated haplotype support for each barcode, " << barcode_haplotype_mappings.size() <<  std::endl;
 
 }
 
@@ -234,10 +215,12 @@ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames) {
     // stop now... but TODO: sum supports and overall supports, see if they vary each time
     //saw no variations when loading, only dumping
     // also see if it varies if comment out parallel code- seems not to when dumping
-    if ((std::get<0>(pair_support_overall_winner) == haplotype_overall_support[overall_support_max_index]  ||
-         std::get<1>(pair_support_overall_winner) == haplotype_overall_support[overall_support_max_index] ) &&
-        (std::get<0>(pair_support_winner) == haplotype_support[support_max_index] ||
-         std::get<1>(pair_support_winner) == haplotype_support[support_max_index])) {
+    //std::cout << "std::get<0>(pair_support_overall_winner) " << std::get<0>(pair_support_overall_winner) << "  haplotype_overall_support[overall_support_max_index]  " <<  haplotype_overall_support[overall_support_max_index] << " overall_support_max_index " << overall_support_max_index<< " std::get<1>(pair_support_overall_winner) "<< std::get<1>(pair_support_overall_winner) << "  std::get<0>(pair_support_winner) " << std::get<0>(pair_support_winner) << " std::get<1>(pair_support_winner) " << std::get<1>(pair_support_winner) << " haplotype_support[support_max_index]) " << haplotype_support[support_max_index] << " support_max_index " << support_max_index << std::endl;
+
+    if ((std::get<0>(pair_support_overall_winner) == overall_support_max_index ||
+         std::get<1>(pair_support_overall_winner) == overall_support_max_index ) &&
+        (std::get<0>(pair_support_winner) == support_max_index ||
+         std::get<1>(pair_support_winner) == support_max_index )) {
         this->winners = std::make_pair(haplotype_ids[std::get<0>(pair_support_overall_winner)], haplotype_ids[std::get<1>(pair_support_overall_winner)]);
         this->success = true;
         return  1;
