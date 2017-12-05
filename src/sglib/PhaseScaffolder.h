@@ -27,7 +27,9 @@ public:
     void output_bubbles(std::string);
     void phase_components();
     void load_mappings(std::string , std::string , std::string, uint64_t , std::string);
-    PairedReadMapper mapper;
+    void load_mappings_from_file(std::string );
+
+        PairedReadMapper mapper;
 
 };
 

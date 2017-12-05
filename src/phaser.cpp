@@ -75,10 +75,18 @@ int main(int argc, char * argv[]) {
         std::cout << dump_mapped.size() << dump_mapped[0].size() << dump_mapped[0] << std::endl;
         to_map = dump_mapped[0];
     }
+    std::string from_map = "";
+    if (load_mapped.size() != 0){
+        from_map = load_mapped[0];
+    }
     sg.load_from_gfa(gfa_filename);
     PhaseScaffolder ps = PhaseScaffolder(sg);
        auto fasta_filename=gfa_filename.substr(0,gfa_filename.size()-4)+".fasta";
+    if(from_map != ""){
+        ps.load_mappings_from_file(from_map);
+    } else {
         ps.load_mappings(reads1, reads2, fasta_filename, max_mem_gb, to_map);
+    }
         ps.phase_components();
 
 

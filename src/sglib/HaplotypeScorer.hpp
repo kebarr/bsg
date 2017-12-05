@@ -39,10 +39,9 @@ private:
     std::vector<std::vector<sgNodeID_t> > haplotype_ids;
 
     std::vector <prm10xTag_t> unused_barcodes;
-    std::map<sgNodeID_t , std::vector<int> > node_id_haplotype_index_map;
-    std::map<sgNodeID_t , std::string > id_to_contig_name;
 
     std::vector<int>  winner_for_barcode(prm10xTag_t barcode);
+    void analyse_scores(std::vector<std::string>, std::vector<int > , std::vector<int >, std::vector<int >, std::map<std::pair<int, int>, int> , std::map<std::pair<int, int>, int> , std::map<std::pair<int, int>, int>  );
 
     std::map<int, std::map<prm10xTag_t, int > > haplotype_barcode_agree;
     std::map<int, std::map<prm10xTag_t, int > > haplotype_barcode_disagree;
