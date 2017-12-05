@@ -162,26 +162,34 @@ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames) {
     // this gives value of max support, not index, must be better way
 
     auto winner_index = std::max_element(haplotype_support.begin(), haplotype_support.end());
-    std::cout << "hap " << *winner_index << " winning contigs: " << std::endl;
+    auto overall_winner_index = std::max_element(haplotype_overall_support.begin(), haplotype_overall_support.end());
 
-    std::vector<int> support_winner;
+    std::cout << "hap " << *winner_index << " winning, overall winner:  " << *overall_winner_index << std::endl;
 
-    for (int h = 0; h < haplotype_ids.size(); h++) {
+    //std::vector<int> support_winner;
+    //std::vector<int> overall_support_winner;
+
+    /*for (int h = 0; h < haplotype_ids.size(); h++) {
         if (haplotype_support[h] == *winner_index) {
             std::cout << "Winner: " << h << std::endl;
             support_winner.push_back(h);
         }
+        if (haplotype_overall_support[h] == *overall_winner_index) {
+            std::cout << "Winner overall: " << h << std::endl;
+            overall_support_winner.push_back(h);
+        }
     }
-    std::cout << "hap " << *winner_index << " winning contigs: " << std::endl;
-
     for (auto w: support_winner){
        for (auto h:haplotype_ids[w]){
 
            std::cout <<" c " << oldnames[h] << " ";
 
        }
-       std::cout << std::endl;
+       std::cout << std::endl;*/
 
+    if (winner_index==overall_winner_index){
+        this->success = true;
+        return 1;
     }
 
     return 0;
