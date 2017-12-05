@@ -157,8 +157,8 @@ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames) {
         std::vector<int> winners = winner_for_barcode(barcode); // ideally should be length 1
         for (auto winner:winners){
             int pair = haplotype_ids.size() - 1 - winner;
+            // like this, support and pair support always identical
             haplotype_support[winner] += 1;
-
             hap_pair_support[std::make_pair(winner, pair)] += 1;
             haplotype_barcode_agree[winner][barcode] += bm.second[winner];
             haplotype_barcode_disagree[winner][barcode] += bm.second[pair];
@@ -189,53 +189,44 @@ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames) {
     }
     analyse_scores(oldnames, haplotype_support, haplotype_not_support, haplotype_overall_support, hap_pair_support,hap_pair_not_support, hap_pair_support_total_score );
 
-        // this gives value of max support, not index, must be better way
-    std::ofstream out("res_loaded_from_disk_no_omp_load1.txt");
-    // according to internet, this should be index, but its not
-    auto winner_score = std::max_element(haplotype_support.begin(), haplotype_support.end());
-    auto overall_winner_score = std::max_element(haplotype_overall_support.begin(), haplotype_overall_support.end());
+    auto support_max_index = std::distance(haplotype_support.begin(), std::max_element (haplotype_support.begin(),haplotype_support.end()));
+    auto overall_support_max_index = std::distance(haplotype_overall_support.begin(), std::max_element (haplotype_overall_support.begin(),haplotype_overall_support.end()));
+    // these just give last....
+    //auto pair_support_max_index = std::max_element (std::begin(hap_pair_support),std::end(hap_pair_support));
+    //auto pair_overall_support_max_index = std::max_element (std::begin(hap_pair_support_total_score),std::end(hap_pair_support_total_score));
+    int pair_support_max = 0;
+    std::pair<sgNodeID_t , sgNodeID_t > pair_support_winner;
+    int pair_overall_support_max = 0;
+    std::pair<sgNodeID_t , sgNodeID_t > pair_support_overall_winner;
 
-    std::cout << "hap " << *winner_score << " winning, overall winner:  " << *overall_winner_score << std::endl;
-    out << "hap " << *winner_score << " winning, overall winner:  " << *overall_winner_score << std::endl;
-
-    std::vector<int> support_winner;
-    std::vector<int> overall_support_winner;
-
-    for (int h = 0; h < haplotype_ids.size(); h++) {
-        if (haplotype_support[h] == *winner_score) {
-            std::cout << "Winner: " << h << std::endl;
-            out << "Winner: " << h << std::endl;
-
-            support_winner.push_back(h);
-        }
-        if (haplotype_overall_support[h] == *overall_winner_score) {
-            std::cout << "Winner overall: " << h << std::endl;
-            out << "Winner overall: " << h << std::endl;
-
-            overall_support_winner.push_back(h);
+    for (auto p: hap_pair_support){
+        if (p.second > pair_support_max){
+            pair_support_max = p.second;
+            pair_support_winner = std::make_pair(std::get<0>(p.first), std::get<1>(p.first));
         }
     }
-    for (int i=0; i < haplotype_support.size() ; i++){
-        std::cout << i << " " << haplotype_support[i] << ", ";
-        out << i << " " << haplotype_support[i] << ", ";
-
+    for (auto p: hap_pair_support_total_score){
+        if (p.second > pair_overall_support_max){
+            pair_overall_support_max = p.second;
+            pair_support_overall_winner = std::make_pair(std::get<0>(p.first), std::get<1>(p.first));
+        }
     }
-    std::cout <<std::endl << "haplotype_overall_support: \n" ;
-    out <<std::endl << "haplotype_overall_support: \n" ;
+    std::cout << "Support max index: " << support_max_index << " max support value: " << haplotype_support[support_max_index] << std::endl;
+    std::cout << "overall Support max index: " << overall_support_max_index << " max support value: " << haplotype_overall_support[overall_support_max_index] << std::endl;
+    std::cout << "pair Support max index: " << std::get<0>(pair_support_winner) << " " << std::get<1>(pair_support_winner)<< " " << " max support value: " << pair_support_max << std::endl;
+    std::cout << "pair overall Support max index: " << std::get<0>(pair_support_overall_winner) << " " << std::get<1>(pair_support_overall_winner)<< " " << " max support value: " << pair_overall_support_max   << std::endl;
 
-    for (int i=0; i < haplotype_overall_support.size() ; i++){
-        std::cout << i << " " << haplotype_overall_support[i] << ", ";
-
-        out << i << " " << haplotype_overall_support[i] << ", ";
-    }
-    std::cout <<std::endl;
 
     // stop now... but TODO: sum supports and overall supports, see if they vary each time
     //saw no variations when loading, only dumping
     // also see if it varies if comment out parallel code- seems not to when dumping
-    if (support_winner[0]==overall_support_winner[0]){
+    if ((std::get<0>(pair_support_overall_winner) == haplotype_overall_support[overall_support_max_index]  ||
+         std::get<1>(pair_support_overall_winner) == haplotype_overall_support[overall_support_max_index] ) &&
+        (std::get<0>(pair_support_winner) == haplotype_support[support_max_index] ||
+         std::get<1>(pair_support_winner) == haplotype_support[support_max_index])) {
+        this->winners = std::make_pair(haplotype_ids[std::get<0>(pair_support_overall_winner)], haplotype_ids[std::get<1>(pair_support_overall_winner)]);
         this->success = true;
-        return 1;
+        return  1;
     }
 
     return 0;
@@ -269,9 +260,42 @@ void HaplotypeScorer::analyse_scores(std::vector<std::string > oldnames, std::ve
         haplotype_overall_support_vals.push_back(haplotype_overall_support[i]);
 
     }
-    // success is judged by getting highest scoring pair/non support/overall winners and checking they agree
-    auto max_index = std::distance(haplotype_support.begin(), std::max_element (haplotype_support.begin(),haplotype_support.end()));
 
+    std::cout << "overall support vals: \n";
+
+    print_int_vector(haplotype_overall_support_vals);
+    std::cout << "support vals: \n";
+
+    print_int_vector(haplotype_support_vals);
+    // success is judged by getting highest scoring pair/non support/overall winners and checking they agree
+    auto support_max_index = std::distance(haplotype_support.begin(), std::max_element (haplotype_support.begin(),haplotype_support.end()));
+    auto overall_support_max_index = std::distance(haplotype_overall_support.begin(), std::max_element (haplotype_overall_support.begin(),haplotype_overall_support.end()));
+    // these just give last....
+    //auto pair_support_max_index = std::max_element (std::begin(hap_pair_support),std::end(hap_pair_support));
+    //auto pair_overall_support_max_index = std::max_element (std::begin(hap_pair_support_total_score),std::end(hap_pair_support_total_score));
+    int pair_support_max = 0;
+    std::pair<sgNodeID_t , sgNodeID_t > pair_support_winner;
+    int pair_overall_support_max = 0;
+    std::pair<sgNodeID_t , sgNodeID_t > pair_support_overall_winner;
+
+    for (auto p: hap_pair_support){
+        if (p.second > pair_support_max){
+            pair_support_max = p.second;
+            pair_support_winner = std::make_pair(std::get<0>(p.first), std::get<1>(p.first));
+        }
+    }
+    for (auto p: hap_pair_support_total_score){
+        if (p.second > pair_overall_support_max){
+            pair_overall_support_max = p.second;
+             pair_support_overall_winner = std::make_pair(std::get<0>(p.first), std::get<1>(p.first));
+        }
+    }
+    std::cout << "Support max index: " << support_max_index << " max support value: " << haplotype_support[support_max_index] << std::endl;
+    std::cout << "overall Support max index: " << overall_support_max_index << " max support value: " << haplotype_overall_support[overall_support_max_index] << std::endl;
+    std::cout << "pair Support max index: " << std::get<0>(pair_support_winner) << " " << std::get<1>(pair_support_winner)<< " " << " max support value: " << pair_support_max << std::endl;
+    std::cout << "pair overall Support max index: " << std::get<0>(pair_support_overall_winner) << " " << std::get<1>(pair_support_overall_winner)<< " " << " max support value: " << pair_overall_support_max   << std::endl;
+
+    std::cout << "NNNNNN*****&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& \n";
     std::vector<std::pair<int, int> > supports;
     std::vector<std::pair<int, int> > overall_supports;
     std::vector<std::pair<std::pair<int, int>, int> > pair_supports;
@@ -315,6 +339,16 @@ void HaplotypeScorer::analyse_scores(std::vector<std::string > oldnames, std::ve
             hap_pair_support_values.push_back(h.second);
             pair_supports.push_back(std::make_pair(h.first, h.second));
         }
+        std::cout << "overall support vals: \n";
+
+        print_int_vector(haplotype_overall_support_vals);
+        std::cout << "support vals: \n";
+
+        print_int_vector(haplotype_support_vals);
+        std::cout << "pair support vals: \n";
+
+        print_int_vector(hap_pair_support_values);
+
         for (auto h : hap_pair_not_support) {
             hap_pair_not_support_values.push_back(h.second);
         }
@@ -323,6 +357,10 @@ void HaplotypeScorer::analyse_scores(std::vector<std::string > oldnames, std::ve
             hap_pair_support_total_score_values.push_back(h.second);
             pair_overall_supports.push_back(std::make_pair(h.first, h.second));
         }
+
+        std::cout << "pair support vals: \n";
+
+        print_int_vector(hap_pair_support_total_score_values);
         std::sort(pair_supports.begin(), pair_supports.end(), [](auto &left, auto &right) {
             return left.second < right.second;
         });

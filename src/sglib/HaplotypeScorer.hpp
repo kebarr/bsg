@@ -30,6 +30,7 @@ public:
     std::map<prm10xTag_t, std::map< int, int > > barcode_haplotype_mappings;
     std::map<prm10xTag_t, std::map< int, int > > barcode_haplotype_mappings2;
     bool success = false; // if doing partial success replace with enum
+    std::pair<std::vector<sgNodeID_t >, std::vector< sgNodeID_t > > winners;
 
 private:
 
