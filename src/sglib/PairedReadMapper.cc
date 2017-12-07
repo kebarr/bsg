@@ -17,14 +17,14 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
      */
     FastqReader<FastqRecord> fastqReader({0},filename);
     std::atomic<uint64_t> mapped_count(0),total_count(0);
-//#pragma omp parallel shared(fastqReader,reads_in_node)// this lione has out of bounds error on my weird read file AND  ‘PairedReadMapper::reads_in_node’ is not a variable in clause ‘shared’ when compiling on
+#pragma omp parallel shared(fastqReader,reads_in_node)// this lione has out of bounds error on my weird read file AND  ‘PairedReadMapper::reads_in_node’ is not a variable in clause ‘shared’ when compiling on
     {
         FastqRecord read;
         std::vector<KmerIDX> readkmers;
         kmerIDXFactory<FastqRecord> kf({k});
         ReadMapping mapping;
         bool c ;
-//#pragma omp critical(read_record)
+#pragma omp critical(read_record)
         c = fastqReader.next_record(read);
         while (c) {
 
@@ -54,7 +54,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                                 break; //invalid tags with non-ACGT chars
                         }
                     }
-//#pragma omp critical(add_mapped_tagged)
+#pragma omp critical(add_mapped_tagged)
                     {
                         //TODO: inefficient
                         if (read_to_tag.size() <= mapping.read_id) read_to_tag.resize(mapping.read_id + 1);
@@ -99,13 +99,13 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
 
                 mapping.read_id=(read.id)*2+offset;
 
-//#pragma omp critical(add_mapped)
+#pragma omp critical(add_mapped)
                 reads_in_node[mapping.node].push_back(mapping);
                 ++mapped_count;
             }
             auto tc=++total_count;
             if (tc % 100000 == 0) std::cout << mapped_count << " / " << tc << std::endl;
-//#pragma omp critical(read_record)
+#pragma omp critical(read_record)
             c = fastqReader.next_record(read);
         }
 
