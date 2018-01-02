@@ -41,7 +41,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                 //process tag if 10x! this way even ummaped reads get tags
                 if (is_tagged) {
                     if (read.name.size() > 16) {
-                        std::string barcode = read.name.substr(1,16);
+                        std::string barcode = read.name.substr(read.name.size() - 16);
                         prm10xTag_t tag = 0;
                         for (auto &b:barcode) {
                             tag <<= 2;
