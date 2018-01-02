@@ -28,9 +28,10 @@ public:
     std::map<prm10xTag_t, std::map<sgNodeID_t , int> > barcode_node_mappings;
     void decide_barcode_haplotype_support();
     std::map<prm10xTag_t, std::map< int, int > > barcode_haplotype_mappings;
-    std::map<prm10xTag_t, std::map< int, int > > barcode_haplotype_mappings2;
     bool success = false; // if doing partial success replace with enum
     std::pair<std::vector<sgNodeID_t >, std::vector< sgNodeID_t > > winners;
+    //tags supporting h1 and h2
+    std::pair<std::map<prm10xTag_t, int > , std::map<prm10xTag_t, int > > supporting_barcodes;
 
 private:
 

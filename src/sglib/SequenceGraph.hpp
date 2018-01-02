@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include "sglib/readers/FileReader.h"
 
+typedef uint32_t prm10xTag_t;
 typedef int64_t sgNodeID_t; //first node is 1; negatives are RC
 
 enum sgNodeStatus_t {sgNodeActive,sgNodeDeleted};
@@ -91,6 +92,8 @@ public:
     std::unordered_map<std::string,sgNodeID_t> oldnames_to_ids;
     std::vector<std::string> oldnames;
     std::string filename,fasta_filename;
+    // for each node, just store which barcodes map to which node
+    std::vector< std::vector<prm10xTag_t> > tags;
 };
 
 

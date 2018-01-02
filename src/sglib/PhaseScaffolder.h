@@ -25,11 +25,16 @@ public:
     SequenceGraph & sg;
 
     void output_bubbles(std::string);
-    void phase_components();
+    void phase_components(int max_bubbles=12);
     void load_mappings(std::string , std::string , std::string, uint64_t , std::string);
     void load_mappings_from_file(std::string );
 
         PairedReadMapper mapper;
+
+private:
+    int phase_component (std::vector<std::vector<sgNodeID_t >> , HaplotypeScorer&);
+    std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings;
+    void sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> >);
 
 };
 

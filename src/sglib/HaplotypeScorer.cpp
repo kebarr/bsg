@@ -135,6 +135,7 @@ void HaplotypeScorer::count_barcode_votes(PairedReadMapper & mapper){
     std::cout << "counted " << counter << " votes for " << barcode_node_mappings.size() << "barcodes" << std::endl;
 };
 
+
 /**
  *
  *
@@ -236,17 +237,17 @@ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames) {
     std::cout << "pair overall Support max index: " << std::get<0>(pair_support_overall_winner) << " " << std::get<1>(pair_support_overall_winner)<< " " << " max support value: " << pair_overall_support_max   << std::endl;
 
     std::cout << "Haplotype support:\n";
-    print_int_vector(haplotype_support);
+    //print_int_vector(haplotype_support);
 
     std::cout << "Haplotype overall support:\n";
-    print_int_vector(haplotype_overall_support);
+    //print_int_vector(haplotype_overall_support);
 
     std::cout << "Pair support \n";
-    print_pair_int_map(hap_pair_support);
+    //print_pair_int_map(hap_pair_support);
 
 
     std::cout << "Pair overall support \n";
-    print_pair_int_map(hap_pair_support_total_score);
+    //print_pair_int_map(hap_pair_support_total_score);
     // stop now... but TODO: sum supports and overall supports, see if they vary each time
     //saw no variations when loading, only dumping
     // also see if it varies if comment out parallel code- seems not to when dumping
@@ -258,6 +259,7 @@ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames) {
          std::get<1>(pair_support_winner) == support_max_index )) {
         this->winners = std::make_pair(haplotype_ids[std::get<0>(pair_support_overall_winner)], haplotype_ids[std::get<1>(pair_support_overall_winner)]);
         this->success = true;
+        this->supporting_barcodes = std::make_pair(haplotype_barcode_agree[std::get<0>(pair_support_overall_winner)], haplotype_barcode_agree[std::get<1>(pair_support_overall_winner)]);
         return  1;
     }
 

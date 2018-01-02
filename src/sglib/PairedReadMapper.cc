@@ -111,6 +111,8 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
 
 #pragma omp critical(add_mapped)
                 reads_in_node[mapping.node].push_back(mapping);
+
+                sg.tags[mapping.node].push_back(read_to_tag[mapping.read_id]);
                 ++mapped_count;
             }
             auto tc = ++total_count;
