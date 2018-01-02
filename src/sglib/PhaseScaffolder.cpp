@@ -165,4 +165,14 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
         // p indicates whether scoring was successful, partially succesful or failed
         //return p;
     }
+    std::cout << "supporting p1: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+    for (auto s: std::get<0>(hs.barcodes_supporting_winners)){
+        std::cout << s << " ";
+    }
+    std::cout << std::endl << std::get<1>(hs.barcodes_supporting_winners).size() << " supporting: ";
+    for (auto s: std::get<1>(hs.barcodes_supporting_winners)){
+        std::cout << s << " ";
+    }
+    std::cout << std::endl;
+
 }

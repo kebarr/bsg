@@ -29,9 +29,11 @@ public:
     std::pair<std::vector<sgNodeID_t >, std::vector< sgNodeID_t > > winners;
     //tags supporting h1 and h2
     std::pair<std::map<prm10xTag_t, int > , std::map<prm10xTag_t, int > > supporting_barcodes;
+    std::pair<std::set<prm10xTag_t>, std::set<prm10xTag_t>  > barcodes_supporting_winners;
+
 
 private:
-
+    std::map<size_t , std::vector< prm10xTag_t> > barcodes_supporting_haplotype;
     // each het node
     std::set<sgNodeID_t > haplotype_nodes;
     // each possible hsplotype

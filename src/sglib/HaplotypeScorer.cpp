@@ -63,8 +63,8 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
     haplotype_barcodes_total_mappings.resize(haplotype_ids.size());
     haplotype_barcodes_supporting.resize(haplotype_ids.size());
     int total_mappings = 0;
+    std::map<size_t , std::map< prm10xTag_t, int>> barcode_haplotype_shared;
     size_t shared_nodes = 0;
-    std::map<prm10xTag_t , std::map<size_t , int>> barcode_haplotype_shared;
     // for each barcode, calculate which haps it shares nodes with
     for (auto m: barcode_node_mappings){
         auto barcode = m.first;
@@ -72,7 +72,7 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
         for (int i = 0; i < haplotype_ids.size() ; i++) {
             for (auto l: nodes) {
                 if (std::find(haplotype_ids[i].begin(), haplotype_ids[i].end(), l) != haplotype_ids[i].end()) {
-                    barcode_haplotype_shared[barcode][i] += 1;
+                    barcode_haplotype_shared[i][barcode] += 1;
 
                 }
             }
@@ -89,14 +89,14 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
 
                 for (auto f:node_tag_mappings[n]) {
                     // if this barcode shares
-                    if (barcode_haplotype_shared[f.first][i] > node_tag_mappings[n][f.first]/2) {
-                        haplotype_barcodes_supporting[n] += 1;
+                    if (barcode_haplotype_shared[i][f.first] > node_tag_mappings[n][f.first]/2) {
+                        haplotype_barcodes_supporting[i] += 1;
 
                         std::cout << "n: " << n << " i: " << i << std::endl;
                             std::cout << "f: " << f.first << " " << f.second;
-                            haplotype_barcodes_total_mappings[n] += f.second;
+                            haplotype_barcodes_total_mappings[i] += f.second;
                             total_mappings += f.second;
-
+                        barcodes_supporting_haplotype[i].push_back(f.first);
 
                         std::cout << std::endl;
                     }
@@ -163,8 +163,14 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      auto kmer_support_winners = std::make_pair(ordered_haplotype_barcodes_total_mappings[0], haplotype_ids.size() - 1 - ordered_haplotype_barcodes_total_mappings[0]);
     std::cout << "barcode winner: " << std::get<0>(barcode_support_winners) << " " << std::get<1>(barcode_support_winners) << std::endl;
      std::cout << "kmer winner: " << std::get<0>(kmer_support_winners) << " " << std::get<1>(kmer_support_winners) << std::endl;
-    for (auto h:haplotype_ids[std::get<0>(barcode_support_winners)]){
+     std::set<prm10xTag_t> s1;
+     std::set<prm10xTag_t> s2;
+
+     for (auto h:haplotype_ids[std::get<0>(barcode_support_winners)]){
         std::cout << h << " ";
+         for (auto l: barcodes_supporting_haplotype[h]) {
+             s1.insert(l);
+         }
     }
      std::cout << std::endl;
 
@@ -172,12 +178,15 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
          std::cout << h << " ";
      }
      std::cout << std::endl;
-     for (auto h:haplotype_ids[std::get<0>(barcode_support_winners)]){
+     for (auto h:haplotype_ids[std::get<1>(barcode_support_winners)]){
          std::cout <<oldnames[h] << " ";
+         for (auto l: barcodes_supporting_haplotype[h]) {
+             s2.insert(l);
+         }
      }
      std::cout << std::endl;
 
-     for (auto h:haplotype_ids[std::get<0>(kmer_support_winners)]){
+     for (auto h:haplotype_ids[std::get<1>(kmer_support_winners)]){
          std::cout << oldnames[h] << " ";
      }
      std::cout << std::endl;
@@ -186,10 +195,18 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      }
      std::cout << std::endl;
 
-     for (auto h:haplotype_ids[std::get<1>(kmer_support_winners)]){
+
+     std::cout << std::endl;
+     for (auto h:haplotype_ids[9]){
+         std::cout <<oldnames[h] << " ";
+     }
+     std::cout << std::endl;
+
+     for (auto h:haplotype_ids[6]){
          std::cout << oldnames[h] << " ";
      }
-
+     std::cout << std::endl;
+     barcodes_supporting_winners = std::make_pair(s1, s2);
  };
 
 double avg(std::vector<int> v){
