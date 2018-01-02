@@ -144,17 +144,21 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
 int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles){
     HaplotypeScorer hs;
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
+    std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings;
     for (auto bubble:bubbles){
         for (auto b: bubble) {
             relevant_mappings[b] = node_tag_mappings[b];
+            for (auto t: node_tag_mappings[b]){
+                barcode_node_mappings[t.first].push_back(b);
+            }
 
         }
     }
     hs.find_possible_haplotypes(bubbles);
     std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
     // with tags mapping to each node, just score by summing for each haplotype
-    hs.decide_barcode_haplotype_support(relevant_mappings);
-    hs.score_haplotypes();
+    hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
+    hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
     if (hs.barcode_haplotype_mappings.size() > 0) {
         //std::cout << "scored haplotypes " << p << std::endl;

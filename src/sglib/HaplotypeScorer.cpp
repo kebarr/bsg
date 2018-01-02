@@ -59,25 +59,54 @@ void print_pair_int_map(std::map<std::pair<int, int> , int> map){
  * total file records present in the file and the total number of records after filtering.
  */
 
-void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings){
+void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings){
     haplotype_barcodes_total_mappings.resize(haplotype_ids.size());
     haplotype_barcodes_supporting.resize(haplotype_ids.size());
+    int total_mappings = 0;
+    size_t shared_nodes = 0;
+    std::map<prm10xTag_t , std::map<size_t , int>> barcode_haplotype_shared;
+    // for each barcode, calculate which haps it shares nodes with
+    for (auto m: barcode_node_mappings){
+        auto barcode = m.first;
+        auto nodes = m.second;
+        for (int i = 0; i < haplotype_ids.size() ; i++) {
+            for (auto l: nodes) {
+                if (std::find(haplotype_ids[i].begin(), haplotype_ids[i].end(), l) != haplotype_ids[i].end()) {
+                    barcode_haplotype_shared[barcode][i] += 1;
+
+                }
+            }
+        }
+        }
+
+
+    // previously found all nodes that a barcode maps to and only considered ones which mapped to enough of the haploype
     // for each haplotype, loop over each node and sum support
     for (int i = 0; i < haplotype_ids.size() ; i++){
+        // to be same as previous, need to check each barcode counted maps to enough nodes in haplotype
         for (auto n: haplotype_ids[i]){
-            haplotype_barcodes_supporting[n] = node_tag_mappings[n].size();
-            std::cout << "n: " << n << " i: " << i << std::endl;
-            for (auto p: node_tag_mappings[n]  ){
-                std::cout << p.first << " " << p.second ;
-                haplotype_barcodes_total_mappings[n] += p.second;
+            if (node_tag_mappings[n].size() > 1) {
 
+                for (auto f:node_tag_mappings[n]) {
+                    // if this barcode shares
+                    if (barcode_haplotype_shared[f.first][i] > node_tag_mappings[n][f.first]/2) {
+                        haplotype_barcodes_supporting[n] += 1;
+
+                        std::cout << "n: " << n << " i: " << i << std::endl;
+                            std::cout << "f: " << f.first << " " << f.second;
+                            haplotype_barcodes_total_mappings[n] += f.second;
+                            total_mappings += f.second;
+
+
+                        std::cout << std::endl;
+                    }
+                }
             }
-            std::cout << std::endl;
         }
     }
 
 
-    std::cout << "Calculated haplotype support for each barcode, " << barcode_haplotype_mappings.size() <<  std::endl;
+    std::cout << "Calculated haplotype support for each barcode, total mappings: " << total_mappings<<  std::endl;
 
 }
 
@@ -106,7 +135,7 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
  * \todo decide criteria for winning haploype
  *
  */
- int HaplotypeScorer::score_haplotypes(){
+ int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames){
 
      for (auto p: haplotype_barcodes_total_mappings  ){
          std::cout << p << " ";
@@ -134,6 +163,32 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      auto kmer_support_winners = std::make_pair(ordered_haplotype_barcodes_total_mappings[0], haplotype_ids.size() - 1 - ordered_haplotype_barcodes_total_mappings[0]);
     std::cout << "barcode winner: " << std::get<0>(barcode_support_winners) << " " << std::get<1>(barcode_support_winners) << std::endl;
      std::cout << "kmer winner: " << std::get<0>(kmer_support_winners) << " " << std::get<1>(kmer_support_winners) << std::endl;
+    for (auto h:haplotype_ids[std::get<0>(barcode_support_winners)]){
+        std::cout << h << " ";
+    }
+     std::cout << std::endl;
+
+     for (auto h:haplotype_ids[std::get<0>(kmer_support_winners)]){
+         std::cout << h << " ";
+     }
+     std::cout << std::endl;
+     for (auto h:haplotype_ids[std::get<0>(barcode_support_winners)]){
+         std::cout <<oldnames[h] << " ";
+     }
+     std::cout << std::endl;
+
+     for (auto h:haplotype_ids[std::get<0>(kmer_support_winners)]){
+         std::cout << oldnames[h] << " ";
+     }
+     std::cout << std::endl;
+     for (auto h:haplotype_ids[std::get<1>(barcode_support_winners)]){
+         std::cout <<oldnames[h] << " ";
+     }
+     std::cout << std::endl;
+
+     for (auto h:haplotype_ids[std::get<1>(kmer_support_winners)]){
+         std::cout << oldnames[h] << " ";
+     }
 
  };
 
