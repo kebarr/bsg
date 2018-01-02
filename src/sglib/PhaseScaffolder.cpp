@@ -81,60 +81,32 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
 // this finds 2 components for test graph...
     std::cout << "Found " << components.size() << " connected components " << std::endl;
     sum_node_tag_mappings(sg.tags);
+    for (auto n:node_tag_mappings){
+        std::cout << "node: " << n.first << " ";
+        for (auto t: n.second){
+            std::cout << t.first << " " << t.second << " ";
+        }
+        std::cout << std::endl;
+    }
     for (auto component:components) {
 
-        /*for (auto n:component) {
-            if (std::find(to_check.begin(), to_check.end(), n) != to_check.end()) {
-                std::cout << "Checking previously solved component \n";
-
-                o << n << std::endl;*/
-
-        // input for other version at:  to_look_at/subgraph_names.txt
-        HaplotypeScorer hs;
         auto size = component_bps(this->sg, component);
         comp_sizes.push_back(std::make_pair(size, component.size()));
         std::cout << sg.oldnames.size() << " comp size: " << component.size() << " nodes size: " << sg.nodes.size() << std::endl;
-        // oldnames
-        for (auto node:sg.oldnames){
 
-                //std::cout << " " << sg.oldnames[node-1];
-           std::cout << " " << node;
-
-        }
-        for (auto node:component){
-
-            //std::cout << " " << sg.oldnames[node-1];
-            std::cout << " tag: \n";
-            for (auto ts : sg.tags[node]){
-                std::cout << " " << ts;
-            }
-            std::cout << std::endl;
-
-        }
-        std::cout << std::endl;
         // for each node, now have all tags mapping to it- ideallyl should total them
         // sum number of tags and number of mappings for each haplotype
         if (component.size() >= 6) {
             // part of the issue may be barcodes not covering the entire component
-            /*    for (auto c:component){
-                    std::cout << sg.oldnames[c] << " ";
-                }
-    std::cout << std::endl;*/
-// should
-            auto bubbles = sg.find_bubbles(component);
-            for (auto bubble:bubbles){
-                std::cout << "bubble: ";
-                for (auto node:bubble) {
-                    std::cout << " " << sg.oldnames[node];
 
-                }
-                std::cout << std::endl;
-            }
+            auto bubbles = sg.find_bubbles(component);
+
             if (bubbles.size() > 1) {
                 if (bubbles.size() <= max_bubbles) {
+
                     phaseable += 1;
 
-                    int p = phase_component(bubbles, hs);
+                    int p = phase_component(bubbles);
                         phased += p;
 
                 } else {
@@ -157,6 +129,7 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
 
 
 void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> > tag_mappings){
+
     sgNodeID_t counter = 0;
     for (auto n: tag_mappings){
         for (auto tag:n) {
@@ -168,18 +141,24 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
 
 };
 
-int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, HaplotypeScorer &hs){
+int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles){
+    HaplotypeScorer hs;
+    std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
+    for (auto bubble:bubbles){
+        for (auto b: bubble) {
+            relevant_mappings[b] = node_tag_mappings[b];
+
+        }
+    }
     hs.find_possible_haplotypes(bubbles);
     std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
     // with tags mapping to each node, just score by summing for each haplotype
-
-    hs.count_barcode_votes(mapper);
-    hs.decide_barcode_haplotype_support();
+    hs.decide_barcode_haplotype_support(relevant_mappings);
+    hs.score_haplotypes();
 // now have mappings and barcode support
     if (hs.barcode_haplotype_mappings.size() > 0) {
-        int p = hs.score_haplotypes(sg.oldnames);
-        std::cout << "scored haplotypes " << p << std::endl;
+        //std::cout << "scored haplotypes " << p << std::endl;
         // p indicates whether scoring was successful, partially succesful or failed
-        return p;
+        //return p;
     }
 }

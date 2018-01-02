@@ -32,7 +32,7 @@ public:
         PairedReadMapper mapper;
 
 private:
-    int phase_component (std::vector<std::vector<sgNodeID_t >> , HaplotypeScorer&);
+    int phase_component (std::vector<std::vector<sgNodeID_t >>);
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings;
     void sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> >);
 

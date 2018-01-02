@@ -20,13 +20,10 @@ class HaplotypeScorer{
 public:
     // functions we will need:
     void find_possible_haplotypes(std::vector<std::vector<sgNodeID_t >>);
-    void load_haplotypes(std::string, int);
 
-    void count_barcode_votes(PairedReadMapper &);
-    int score_haplotypes(std::vector<std::string> );
+    int score_haplotypes();
 
-    std::map<prm10xTag_t, std::map<sgNodeID_t , int> > barcode_node_mappings;
-    void decide_barcode_haplotype_support();
+    void decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > );
     std::map<prm10xTag_t, std::map< int, int > > barcode_haplotype_mappings;
     bool success = false; // if doing partial success replace with enum
     std::pair<std::vector<sgNodeID_t >, std::vector< sgNodeID_t > > winners;
@@ -43,10 +40,8 @@ private:
     std::vector <prm10xTag_t> unused_barcodes;
 
     std::vector<int>  winner_for_barcode(prm10xTag_t barcode);
-    void analyse_scores(std::vector<std::string>, std::vector<int > , std::vector<int >, std::vector<int >, std::map<std::pair<int, int>, int> , std::map<std::pair<int, int>, int> , std::map<std::pair<int, int>, int>  );
-
-    std::map<int, std::map<prm10xTag_t, int > > haplotype_barcode_agree;
-    std::map<int, std::map<prm10xTag_t, int > > haplotype_barcode_disagree;
+    std::vector<sgNodeID_t> haplotype_barcodes_supporting;
+    std::vector<sgNodeID_t> haplotype_barcodes_total_mappings;
 
 };
 #endif //SG_HAPLOTYPE_SCORER_H
