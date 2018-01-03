@@ -90,13 +90,7 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
 // this finds 2 components for test graph...
     std::cout << "Found " << components.size() << " connected components " << std::endl;
     sum_node_tag_mappings(sg.tags);
-    for (auto n:node_tag_mappings){
-        std::cout << "node: " << n.first << " ";
-        for (auto t: n.second){
-            std::cout << t.first << " " << t.second << " ";
-        }
-        std::cout << std::endl;
-    }
+
     for (auto component:components) {
 
         auto size = component_bps(this->sg, component);
@@ -164,16 +158,30 @@ void PhaseScaffolder::print_barcode_stats(){
 }
 
 
-void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> > tag_mappings){
-
+void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> > tag_mappings, int min_tag_count=1){
+    std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings_int;
     sgNodeID_t counter = 0;
     for (auto n: tag_mappings){
         for (auto tag:n) {
-            node_tag_mappings[counter][tag] += 1;
+            node_tag_mappings_int[counter][tag] += 1;
         }
         counter += 1;
     }
-    std::cout << "summed tag mappings " << std::endl;
+    std::cout << "summed tag mappings: " << node_tag_mappings_int.size() << std::endl;
+    int discarded_barodes = 0;
+    int kept_barodes = 0;
+    for (auto b:node_tag_mappings_int){
+        for (auto t:b.second){
+            if (t.second > min_tag_count){
+                node_tag_mappings[b.first][t.first] = t.second;
+                kept_barodes += 1;
+            } else {
+                discarded_barodes += 1;
+            }
+
+        }
+    }
+    std::cout << "filtered tag mappings: " << node_tag_mappings.size() << " discarded " << discarded_barodes << " barcodes and kept " << kept_barodes << std::endl;
 
 };
 

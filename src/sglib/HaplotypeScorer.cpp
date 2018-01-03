@@ -184,14 +184,7 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
 
 
      std::cout << std::endl;
-     for (auto h:haplotype_ids[9]){
-         std::cout <<oldnames[h] << " ";
-     }
-     std::cout << std::endl;
 
-     for (auto h:haplotype_ids[6]){
-         std::cout << oldnames[h] << " ";
-     }
      std::cout << std::endl;
      barcodes_supporting_winners = std::make_pair(s1, s2);
      if (std::get<0>(barcode_support_winners) == std::get<0>(kmer_support_winners) || std::get<0>(barcode_support_winners) == std::get<1>(kmer_support_winners)){
