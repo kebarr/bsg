@@ -92,13 +92,10 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
                     if (barcode_haplotype_shared[i][f.first] > node_tag_mappings[n][f.first]/2) {
                         haplotype_barcodes_supporting[i] += 1;
 
-                        std::cout << "n: " << n << " i: " << i << std::endl;
-                            std::cout << "f: " << f.first << " " << f.second;
                             haplotype_barcodes_total_mappings[i] += f.second;
                             total_mappings += f.second;
                         barcodes_supporting_haplotype[i].push_back(f.first);
 
-                        std::cout << std::endl;
                     }
                 }
             }
@@ -137,17 +134,6 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
  */
  int HaplotypeScorer::score_haplotypes(std::vector<std::string> oldnames){
 
-     for (auto p: haplotype_barcodes_total_mappings  ){
-         std::cout << p << " ";
-
-     }
-     std::cout << std::endl << " supporting: \n";
-
-     for (auto p: haplotype_barcodes_supporting  ){
-         std::cout << p << " ";
-
-     }
-     std::cout << std::endl;
      // need pairs with max barcodes + kmers support
      auto ordered_haplotype_barcodes_supporting = sort_indexes(haplotype_barcodes_supporting);
      for (auto o:ordered_haplotype_barcodes_supporting){
@@ -166,6 +152,7 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      std::set<prm10xTag_t> s1;
      std::set<prm10xTag_t> s2;
 
+
      for (auto h:haplotype_ids[std::get<0>(barcode_support_winners)]){
         std::cout << h << " ";
          for (auto l: barcodes_supporting_haplotype[h]) {
@@ -179,7 +166,7 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      }
      std::cout << std::endl;
      for (auto h:haplotype_ids[std::get<1>(barcode_support_winners)]){
-         std::cout <<oldnames[h] << " ";
+         //std::cout <<oldnames[h] << " ";
          for (auto l: barcodes_supporting_haplotype[h]) {
              s2.insert(l);
          }
@@ -207,6 +194,15 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      }
      std::cout << std::endl;
      barcodes_supporting_winners = std::make_pair(s1, s2);
+     if (std::get<0>(barcode_support_winners) == std::get<0>(kmer_support_winners) || std::get<0>(barcode_support_winners) == std::get<1>(kmer_support_winners)){
+         if ( std::get<1>(barcode_support_winners) == std::get<0>(kmer_support_winners) || std::get<1>(barcode_support_winners) == std::get<1>(kmer_support_winners) ){
+             return 1;
+         } else {
+             return 2;
+         }
+     } else {
+         return 0;
+     }
  };
 
 double avg(std::vector<int> v){
