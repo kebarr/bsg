@@ -139,19 +139,7 @@ void PhaseScaffolder::phase_components(int max_bubbles=12, int min_barcodes_mapp
             // part of the issue may be barcodes not covering the entire component
 
             auto bubbles = sg.find_bubbles(component);
-            /*for (auto c:component){
-                std::cout << sg.oldnames[c] << " ";
-            }
-            std::cout << std::endl << "bubbles:";
-
-            for (auto b: bubbles){
-                for (auto n: b){
-                    std::cout << sg.oldnames[n] << " ";
-                }
-                std::cout << std::endl;
-
-            }
-            std::cout << std::endl;*/
+            
             if (bubbles.size() > 1) {
                 if (bubbles.size() < max_bubbles) {
 
@@ -228,7 +216,7 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
     // count how many times each barcode maps to each node
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings_int;
     sgNodeID_t counter = 0;
-    //tag mappings, outer index is node id, so for each node, it tells you which barcodes it maps to
+    //tag mappings, outer index is node id, so for each node, it tells you which barcodes  map to it
     for (auto n: tag_mappings){
 
         for (auto tag:n) {
@@ -242,9 +230,10 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
     int discarded_barodes = 0;
     int kept_barodes = 0;
     for (auto b:node_tag_mappings_int){
-        for (auto t:b.second){
+        for (auto t:b.second){//b.second tag: number of times that tag maps to that node
 
-            if (t.second > min_tag_count){
+            if (t.second > min_tag_count){//t.secod : number of times that tag maps to that node
+                // node id: barcode: count
                 node_tag_mappings[b.first][t.first] = t.second;
                 kept_barodes += 1;
             } else {
@@ -261,36 +250,51 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     HaplotypeScorer hs;
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
     std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings;
+    std::vector<std::vector<sgNodeID_t >> bubbles_final;
+    int count_bubble_nodes_with_mappings= 0;
     for (auto bubble:bubbles){
         for (auto b: bubble) {
-            relevant_mappings[b] = node_tag_mappings[b];
-            for (auto t: node_tag_mappings[b]){
-                barcode_node_mappings[t.first].push_back(b);
+            std::cout << "b: " << b << " tags: " << sg.tags[b].size() << std::endl;
+            if (sg.tags[b].size() > 0) {
+                count_bubble_nodes_with_mappings += 1;
+                relevant_mappings[b] = node_tag_mappings[b];
+                for (auto t: node_tag_mappings[b]) {
+                    barcode_node_mappings[t.first].push_back(b);
+                }
             }
 
         }
-    }
-    hs.find_possible_haplotypes(bubbles);
-    std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
-    // with tags mapping to each node, just score by summing for each haplotype
-    auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings, sg.tags);
-    if (barcodes_map > min_barcodes_mapping) {
-        int res = hs.score_haplotypes(sg.oldnames);
-// now have mappings and barcode support
-        if (res == 1) {
-            std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-            std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
-
-            this->phased_components.push_back(hs);
-        } else if (res == 2) {
-            std::cout << "success:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-            std::cout << "success:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
-
-            this->partial_phased_components.push_back(hs);
+        if (count_bubble_nodes_with_mappings > 1){// can't phase unless there's evidence for at least one of the  sudes
+            bubbles_final.push_back(bubble);
         }
-        return res;
-    } else {
-        return  0;
+
+    }
+    std::cout << "bubbles size " << bubbles.size() << " bubbles final: " << bubbles_final.size() << std::endl;
+    if (bubbles_final.size() > 1) {
+        hs.find_possible_haplotypes(bubbles_final);
+        std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
+        // with tags mapping to each node, just score by summing for each haplotype
+        auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
+        if (barcodes_map > min_barcodes_mapping) {
+            int res = hs.score_haplotypes(sg.oldnames);
+// now have mappings and barcode support
+            if (res == 1) {
+                std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+                std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+
+                this->phased_components.push_back(hs);
+            } else if (res == 2) {
+                std::cout << "success:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+                std::cout << "success:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+
+                this->partial_phased_components.push_back(hs);
+            }
+            return res;
+        } else {
+            return 0;
+        }
+    }else {
+        return 0;
     }
 }
 

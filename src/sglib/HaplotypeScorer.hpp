@@ -22,8 +22,8 @@ public:
     void find_possible_haplotypes(std::vector<std::vector<sgNodeID_t >>);
 
     int score_haplotypes(std::vector<std::string>);
-    std::vector<int > remove_nodes_with_no_barcode_support(std::vector< std::vector<prm10xTag_t> > tags_in_node, std::map<size_t , std::map< prm10xTag_t, int>>);
-    int decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > >, std::map<prm10xTag_t, std::vector<sgNodeID_t > >, std::vector< std::vector<prm10xTag_t> > );
+    std::vector<int > remove_nodes_with_no_barcode_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > >, std::map<size_t , std::map< prm10xTag_t, int>>);
+    int decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > >, std::map<prm10xTag_t, std::vector<sgNodeID_t > >);
     std::map<prm10xTag_t, std::map< int, int > > barcode_haplotype_mappings;
     bool success = false; // if doing partial success replace with enum
     std::pair<std::vector<sgNodeID_t >, std::vector< sgNodeID_t > > winners;
@@ -33,6 +33,11 @@ public:
 
 
 private:
+    std::map<sgNodeID_t , size_t > bubble_map;
+    std::vector<std::vector<sgNodeID_t >> bubbles;
+
+    std::pair < std::vector<sgNodeID_t >, std::vector<sgNodeID_t > >  select_nodes_from_draw(std::vector<size_t > );
+    //std::vector<std::vector<sgNodeID_t >> bubbles;
     std::map<size_t , std::vector< prm10xTag_t> > barcodes_supporting_haplotype;
     // each het node
     std::set<sgNodeID_t > haplotype_nodes;
