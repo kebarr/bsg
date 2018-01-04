@@ -42,8 +42,11 @@ private:
     std::vector <prm10xTag_t> unused_barcodes;
 
     std::vector<int>  winner_for_barcode(prm10xTag_t barcode);
-    std::vector<sgNodeID_t> haplotype_barcodes_supporting;
-    std::vector<sgNodeID_t> haplotype_barcodes_total_mappings;
+    // index is ha[plotype, value is number of barcodes supporting
+    std::vector<int> haplotype_barcodes_supporting;
+    // index is ha[plotype, value is number of kmers supporting
+
+    std::vector<int> haplotype_barcodes_total_mappings;
 
 };
 #endif //SG_HAPLOTYPE_SCORER_H

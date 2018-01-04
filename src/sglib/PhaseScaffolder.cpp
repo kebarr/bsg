@@ -168,9 +168,9 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
 
     std::cout << "Phased " << phased <<  " partial phased " << partial_phased << " not Phased " << not_phased <<  " of " << phaseable << " phaseable components, " << too_large
               << " were too large " << " and " << not_phaseable << " did not contain enough bubbles" << std::endl;
-    //intersect_phasings();
+    intersect_phasings();
     std::cout << "Phased components: " << phased_components.size() << " partyially phased: " << partial_phased_components.size() << std::endl;
-    //print_barcode_stats();
+    print_barcode_stats();
 }
 
 void PhaseScaffolder::print_barcode_stats(){
@@ -240,8 +240,14 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
     if (res == 1){
+        std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+        std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+
         phased_components.push_back(hs);
     } else if (res == 2) {
+        std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+        std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+
         partial_phased_components.push_back(hs);
     }
     return res;
@@ -250,17 +256,20 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
 void PhaseScaffolder::intersect_phasings(){
     std::cout << "intersecting " << phased_components.size() << " phasings" << std::endl;
     int min_intersections = 10; // arbitrary, test
+
+    phased_components.insert(phased_components.end(), partial_phased_components.begin(), partial_phased_components.end());
     //  for each phasing, find intersection with other phasings, help consistency by requiring x overlaps?
     std::vector<std::set<prm10xTag_t> > phasings;
     phasings.push_back(std::get<0>(phased_components[0].barcodes_supporting_winners));
     phasings.push_back(std::get<1>(phased_components[0].barcodes_supporting_winners));
+    std::cout << "phasings 0 size; " << phasings[0].size() << " phasings 1 sixe " << phasings[1].size() << std::endl;
     int ambiguous_phasings = 0;
     std::vector<int> not_phased;
     for (int  i =1; i < phased_components.size(); i ++){
         auto c1 = std::get<0>(phased_components[i].barcodes_supporting_winners);
         auto c2 = std::get<1>(phased_components[i].barcodes_supporting_winners);
-        std::vector<unsigned long> best_phasing1;
-        std::vector<unsigned long > best_phasing2;
+        std::vector<unsigned long> best_phasing1 = {-1, -1};
+        std::vector<unsigned long > best_phasing2 = {-1, -1};
 
         for (int j =0 ; j < phasings.size(); j++){
             auto phasing = phasings[j];
@@ -268,6 +277,7 @@ void PhaseScaffolder::intersect_phasings(){
             std::set_intersection(phasing.begin(), phasing.end(), c1.begin(), c1.end(), std::back_inserter(int1));
             std::vector<prm10xTag_t > int2;
             std::set_intersection(phasing.begin(), phasing.end(), c2.begin(), c2.end(), std::back_inserter(int2));
+            std::cout << "j: " << j << " i: " << i << " int1 size: " << int1.size() << " int2 size: " << int2.size();
             if (int1.size() > best_phasing1[1]){
                 best_phasing1 = {j, int1.size()}; // this loses which phasing it was but don't think that matters
             }
