@@ -76,18 +76,42 @@ size_t  component_bps(SequenceGraph &sg, std::vector<sgNodeID_t > component){
 
 std::vector<std::vector<std::vector<sgNodeID_t > > > PhaseScaffolder::split_component(std::vector<std::vector<sgNodeID_t >> bubbles, int max_bubbles=12){
     // bubbles listed in order they appear in component
-    int to_make = bubbles.size()/max_bubbles;
-    std::cout << "splitting componenet with " << bubbles.size() << " bubbles into " << to_make << "subcomponents" << std::endl;
     std::vector<std::vector<std::vector<sgNodeID_t > >> bubbles_split;
-    for (int i =0 ; i < to_make-1; i++){
-        std::vector<std::vector<sgNodeID_t >> new_bubble(&bubbles[i*max_bubbles], &bubbles[(i+1)*max_bubbles]);
+
+    int to_make = bubbles.size() / (max_bubbles);
+    std::cout << "splitting componenet with " << bubbles.size() << " bubbles into " << to_make << "subcomponents" << std::endl;
+
+    if (bubbles.size()%max_bubbles == 1) {
+        // can't leave part with single bubble
+        int i=0;
+        for (i; i < to_make-2; i ++){
+
+            std::vector<std::vector<sgNodeID_t >> new_bubble(&bubbles[i*max_bubbles], &bubbles[(i+1)*max_bubbles]);
+            bubbles_split.push_back(new_bubble);
+            std::cout << new_bubble.size() << " ";
+        }
+        // penultimate component should have 1 less bubble so last can have 2
+        i = to_make-2;
+        std::vector<std::vector<sgNodeID_t >> new_bubble(&bubbles[i*max_bubbles], &bubbles[(i+1)*max_bubbles-1]);
         bubbles_split.push_back(new_bubble);
+        std::cout << new_bubble.size() << " ";
+
+        std::vector<std::vector<sgNodeID_t >> new_bubble_final(&bubbles[(i+1)*max_bubbles-1], &bubbles[bubbles.size()-1]);
+        std::cout << new_bubble_final.size() << "\n";
+        return bubbles_split;
+
+    } else {
+        for (int i = 0; i < to_make - 1; i++) {
+            std::vector<std::vector<sgNodeID_t >> new_bubble(&bubbles[i * max_bubbles],
+                                                             &bubbles[(i + 1) * max_bubbles]);
+            bubbles_split.push_back(new_bubble);
+        }
     }
     return bubbles_split;
 
 }
 
-void PhaseScaffolder::phase_components(int max_bubbles=12) {
+void PhaseScaffolder::phase_components(int max_bubbles=12, int min_barcodes_mapping=10) {
 
 //find and phase each component of gfa
     auto components = sg.connected_components();
@@ -129,13 +153,16 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
             }
             std::cout << std::endl;*/
             if (bubbles.size() > 1) {
-                if (bubbles.size() <= max_bubbles) {
+                if (bubbles.size() < max_bubbles) {
 
                     phaseable += 1;
 
-                    int p = phase_component(bubbles);
+                    int p = phase_component(bubbles, min_barcodes_mapping);
                     if (p == 1) {
                         phased += 1;
+                        std::cout << std::get<0>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
+                        std::cout << std::get<1>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
+
                     } else if (p == 2){
                         partial_phased += 1;
                     } else if (p == 0){
@@ -147,9 +174,13 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
                     // TODO output these and work out how to split up sensibly
                     auto split = split_component(bubbles);
                     for (auto sp: split){
-                        int p = phase_component(sp);
+                        int p = phase_component(sp, min_barcodes_mapping);
                         if (p == 1) {
                             phased += 1;
+
+                            std::cout << std::get<0>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
+                            std::cout << std::get<1>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
+
                         } else if (p == 2){
                             partial_phased += 1;
                         } else if (p == 0){
@@ -197,6 +228,7 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings_int;
     sgNodeID_t counter = 0;
     for (auto n: tag_mappings){
+
         for (auto tag:n) {
             node_tag_mappings_int[counter][tag] += 1;
         }
@@ -220,7 +252,7 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
 
 };
 
-int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles){
+int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, int min_barcodes_mapping=10){
     HaplotypeScorer hs;
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
     std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings;
@@ -236,21 +268,25 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     hs.find_possible_haplotypes(bubbles);
     std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
     // with tags mapping to each node, just score by summing for each haplotype
-    hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
-    int res = hs.score_haplotypes(sg.oldnames);
+    auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
+    if (barcodes_map > min_barcodes_mapping) {
+        int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
-    if (res == 1){
-        std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-        std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+        if (res == 1) {
+            std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+            std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
 
-        phased_components.push_back(hs);
-    } else if (res == 2) {
-        std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-        std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+            this->phased_components.push_back(hs);
+        } else if (res == 2) {
+            std::cout << "success:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+            std::cout << "success:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
 
-        partial_phased_components.push_back(hs);
+            this->partial_phased_components.push_back(hs);
+        }
+        return res;
+    } else {
+        return  0;
     }
-    return res;
 }
 
 void PhaseScaffolder::intersect_phasings(){
@@ -262,7 +298,7 @@ void PhaseScaffolder::intersect_phasings(){
     std::vector<std::set<prm10xTag_t> > phasings;
     phasings.push_back(std::get<0>(phased_components[0].barcodes_supporting_winners));
     phasings.push_back(std::get<1>(phased_components[0].barcodes_supporting_winners));
-    std::cout << "phasings 0 size; " << phasings[0].size() << " phasings 1 sixe " << phasings[1].size() << std::endl;
+    std::cout << "phasings 0 size; " << phasings[0].size() << " phasings 1 size " << phasings[1].size() << std::endl;
     int ambiguous_phasings = 0;
     std::vector<int> not_phased;
     for (int  i =1; i < phased_components.size(); i ++){
@@ -270,6 +306,8 @@ void PhaseScaffolder::intersect_phasings(){
         auto c2 = std::get<1>(phased_components[i].barcodes_supporting_winners);
         std::vector<unsigned long> best_phasing1 = {-1, -1};
         std::vector<unsigned long > best_phasing2 = {-1, -1};
+        std::cout << "barcides supporting hap 1 of comp " << i << " " << c1.size() << std::endl;
+        std::cout << "barcides supporting hap 2 of comp " << i << " " << c2.size() << std::endl;
 
         for (int j =0 ; j < phasings.size(); j++){
             auto phasing = phasings[j];

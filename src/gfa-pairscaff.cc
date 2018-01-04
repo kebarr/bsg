@@ -40,8 +40,19 @@ int main(int argc, char * argv[]) {
                 ("max_mem", "maximum_memory when mapping (GB, default: 4)", cxxopts::value<uint64_t>(max_mem_gb));
 
 
-        auto result(options.parse(argc, argv));
-
+        std::cout << "input: \n" << argc << " options \n" << argv[0]<< " " << argv[1] << argv[2] << " " << argv[3]
+               << argv[4] << " " << argv[5] << argv[6] << " " << argv[7] << " " << argv[8] << " " << argv[9] << " " << argv[10] << " " << argv[11] << " " << argv[12] << " " ;
+                  auto result(options.parse(argc, argv));
+        std::cout << "ressult: " << result.count("r") << std::endl;
+        for (auto r:result.arguments()){
+            std::cout << r.key() << ": " << r.value();
+        }
+        std::cout << std::endl;
+        for(int i=0;i<argc-1;i++){
+            printf("%s",*argv[i]);
+            std::cout << "in main loop \n";
+        }
+        std::cout << std::endl;
         if (result.count("help"))
         {
             std::cout << options.help({"","Paired reads options","Compression Index Options"}) << std::endl;
@@ -121,6 +132,7 @@ int main(int argc, char * argv[]) {
         mappers.back().load_from_disk(loadfile);
         mappers.back().print_stats();
     }
+    std::cout << reads1.size() << "reads1.size()\n" ;
     for(int lib=0;lib<reads1.size();lib++) {
         mappers.emplace_back(sg);
         if (reads_type[lib]=="10x") {
@@ -128,20 +140,43 @@ int main(int argc, char * argv[]) {
         } else {
             mappers.back().map_reads(reads1[lib], reads2[lib], prmPE, max_mem_gb * 1024L * 1024L * 1024L);
         }
+        std::cout<<"filenames: "<<mappers.back().read1filename<<" and "<<mappers.back().read2filename<<std::endl;
+
         mappers.back().print_stats();
         if (dump_mapped.size() > 0) {
             std::cout<<"dumping map to "<<dump_mapped[lib]<<std::endl;
             mappers.back().save_to_disk(dump_mapped[lib]);
         }
     }
+    std::cout << mappers.size() << " mappers.size()\n" ;
+
+    for (auto &m:mappers) {
+        std::cout<<"filenames: "<<m.read1filename<<" and "<<m.read2filename<<std::endl;
+
+    }
 
     std::cout<<std::endl<<"=== Scaffolding ==="<<std::endl;
 
     Scaffolder scaff(sg,mappers,kci);
+    for (auto &m:mappers) {
+        std::cout<<"filenames: "<<m.read1filename<<" and "<<m.read2filename<<std::endl;
+
+    }
 
     scaff.pop_unsupported_shortbubbles();
+    for (auto &m:mappers) {
+        std::cout<<"filenames: "<<m.read1filename<<" and "<<m.read2filename<<std::endl;
+
+    }
+
     sg.join_all_unitigs();
     for (auto &m:mappers) {
+        std::cout<<"filenames: "<<m.read1filename<<" and "<<m.read2filename<<std::endl;
+
+    }
+
+    for (auto &m:mappers) {
+        // bug here - loaded from disk = no filename
         std::cout<<"removing obsolete mappings from "<<m.read1filename<<" and "<<m.read2filename<<std::endl;
         m.remove_obsolete_mappings();
         m.print_stats();

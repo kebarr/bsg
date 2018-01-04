@@ -59,10 +59,11 @@ void print_pair_int_map(std::map<std::pair<int, int> , int> map){
  * total file records present in the file and the total number of records after filtering.
  */
 
-void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings){
+int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings){
     haplotype_barcodes_total_mappings.resize(haplotype_ids.size());
     haplotype_barcodes_supporting.resize(haplotype_ids.size());
     int total_mappings = 0;
+    int total_barcodes = 0;
     std::map<size_t , std::map< prm10xTag_t, int>> barcode_haplotype_shared;
     size_t shared_nodes = 0;
     // for each barcode, calculate which haps it shares nodes with
@@ -79,15 +80,18 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
         }
         }
 
+    // ONLY COUNT NODES THAT ARE VOTED FOR- EG H1 IS 1,2,3,4 BUT NO VOTES FOR 4, AND H2 IS 1,2,3,5 WITH NONE FOR 5- THESE ARE SAME!
+    std::set<std::vector<sgNodeID_t > > haplotype_ids_remove_unmapped_nodes;
 
     // previously found all nodes that a barcode maps to and only considered ones which mapped to enough of the haploype
     // for each haplotype, loop over each node and sum support
     for (int i = 0; i < haplotype_ids.size() ; i++){
+        std::vector<sgNodeID_t >  supported_nodes;
         // to be same as previous, need to check each barcode counted maps to enough nodes in haplotype
         for (auto n: haplotype_ids[i]){
-            if (node_tag_mappings[n].size() > 1) {
-
-                for (auto f:node_tag_mappings[n]) {
+            if (node_tag_mappings[n].size() > 1) {// if more than 1 barcode maps tp this node
+                supported_nodes.push_back(n);
+                for (auto f:node_tag_mappings[n]) {// assign each barcode mapped to this node to the relevant haplotype
                     // if this barcode maps to enough nodes in this haplotype
                     // f.first is barcode,
                     if (barcode_haplotype_shared[i][f.first] > node_tag_mappings[n][f.first]/2) {
@@ -95,6 +99,7 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
 
                             haplotype_barcodes_total_mappings[i] += f.second;
                             total_mappings += f.second;
+                        total_barcodes += 1;
                         if (barcodes_supporting_haplotype[i].size() > 0){
                             barcodes_supporting_haplotype[i].push_back(f.first);
                             } else {
@@ -106,8 +111,24 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
                 }
             }
         }
+        std::cout << "supported nodes aize : " << supported_nodes.size() << std::endl;
+        for (auto s:supported_nodes){
+            std::cout << s << " ";
+        }
+        std::cout << std::endl;
+        haplotype_ids_remove_unmapped_nodes.insert(supported_nodes);
     }
-
+    std::cout << " distinct haplotypes with supported nodes onlt: " << haplotype_ids_remove_unmapped_nodes.size() << std::endl;
+for (int i=0; i < haplotype_barcodes_supporting.size() ; i++){
+    if (haplotype_barcodes_supporting[i] > 0 || haplotype_barcodes_total_mappings[i] > 0) {
+        std::cout << "i: " << i << " votes " << haplotype_barcodes_supporting[i] << " kmers "
+                  << haplotype_barcodes_total_mappings[i] << std::endl;
+        for (auto h: haplotype_ids[i]) {
+            std::cout << h << " ";
+        }
+        std::cout << std::endl;
+    }
+}
     this->haplotype_barcodes_supporting = haplotype_barcodes_supporting;
     this->haplotype_barcodes_total_mappings = haplotype_barcodes_total_mappings;
     this->barcodes_supporting_haplotype = barcodes_supporting_haplotype;
@@ -119,8 +140,8 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
 
     std::cout << "barcodes_supporting_haplotype.size() "<< barcodes_supporting_haplotype.size() <<  std::endl;
 
-    std::cout << "Calculated haplotype support for each barcode, total mappings: " << total_mappings<<  std::endl;
-
+    std::cout << "Calculated haplotype support for each barcode, total mappings: " << total_mappings<< "total barcodes: " << total_barcodes <<  std::endl;
+    return  total_barcodes;
 }
 
 
@@ -138,6 +159,21 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
 
     return idx;
 }
+
+void HaplotypeScorer::print_voting_stats(std::vector<int> vote_totals){
+    if (vote_totals.size() > 0) {
+        auto mean = std::accumulate(vote_totals.begin(), vote_totals.end(), 0LL) / vote_totals.size();
+
+        double res = 0;
+        for (auto i: vote_totals) {
+            res += std::pow(i - mean, 2);
+        }
+        auto stdev = std::pow(res / vote_totals.size(), 0.5);
+        auto support_max = std::max_element(vote_totals.begin(), vote_totals.end());
+        auto support_min = std::min_element(vote_totals.begin(), vote_totals.end());
+        std::cout << "Max: " << *support_max << " min: " << *support_min << " mean: " << mean << " stdev: " << stdev <<" for " << vote_totals.size() << " haplotypes " <<std::endl;
+    }
+}
  /*
  *
  * @brief
@@ -154,14 +190,11 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      auto ordered_haplotype_barcodes_supporting = sort_indexes(haplotype_barcodes_supporting);
 
      auto ordered_haplotype_barcodes_total_mappings = sort_indexes(haplotype_barcodes_total_mappings);
-     std::cout << haplotype_barcodes_supporting[0] << " " << haplotype_barcodes_supporting[1] << std::endl;
-     std::cout << haplotype_barcodes_total_mappings[0] << " " << haplotype_barcodes_total_mappings[1] << std::endl;
+     std::cout << ordered_haplotype_barcodes_supporting[0] << " won with score " << haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[0]] << " " << ordered_haplotype_barcodes_supporting[1] << " runner up with score " << haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[1]] << std::endl;
+     std::cout << ordered_haplotype_barcodes_total_mappings[0] << " won with score "  << haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[0]] << " " << ordered_haplotype_barcodes_total_mappings[1] << " runner up  with score "  <<haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[1]] << std::endl;
 
-     for (int i = 0 ; i < ordered_haplotype_barcodes_supporting.size() ; i++){
-     //for (auto o: ordered_haplotype_barcodes_supporting){
-         if (ordered_haplotype_barcodes_supporting[i] > 0){
-         std::cout << ordered_haplotype_barcodes_supporting[i]  << " " << i << " " << haplotype_barcodes_supporting[i] << " ";
-             }
+     /*for (int i = 0 ; i < ordered_haplotype_barcodes_supporting.size() ; i++){
+
          if (haplotype_barcodes_supporting[i] > 0){
              std::cout << "h: " << haplotype_barcodes_supporting[i]  << " " << i << " ";
          }
@@ -169,71 +202,98 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
      }
      std::cout << std::endl;
      for (int i = 0 ; i < ordered_haplotype_barcodes_total_mappings.size() ; i++){
-         //for (auto o: ordered_haplotype_barcodes_supporting){
-         if (ordered_haplotype_barcodes_total_mappings[i] > 0){
-             std::cout << ordered_haplotype_barcodes_total_mappings[i]  << " " << i << " " << haplotype_barcodes_total_mappings[i] << " ";
-         }
 
          if (haplotype_barcodes_total_mappings[i] > 0){
              std::cout << "h: " << haplotype_barcodes_total_mappings[i]  << " " << i << " ";
          }
      }
-     std::cout << std::endl;
+     std::cout << std::endl;*/
+    // if there was a vote (rather than 0 barcodes for each haplotype) and no tie, check winner
+     if (haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[0]] >0 && haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[0]] > 0
+         //&& haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[0]] != haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[1]] &&
+           //  haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[0]] != haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[1]]
+             ){
+         std::cout << "barcode support stats: " << std::endl;
+         print_voting_stats(haplotype_barcodes_supporting);
 
-     auto barcode_support_winners = std::make_pair(ordered_haplotype_barcodes_supporting[0], haplotype_ids.size() - 1 - ordered_haplotype_barcodes_supporting[0]);
-     auto kmer_support_winners = std::make_pair(ordered_haplotype_barcodes_total_mappings[0], haplotype_ids.size() - 1 - ordered_haplotype_barcodes_total_mappings[0]);
-    std::cout << "barcode winner: " << std::get<0>(barcode_support_winners) << " " << std::get<1>(barcode_support_winners) << std::endl;
-     std::cout << "kmer winner: " << std::get<0>(kmer_support_winners) << " " << std::get<1>(kmer_support_winners) << std::endl;
-     std::set<prm10xTag_t> s1;
-     std::set<prm10xTag_t> s2;
+         std::cout << "kmer support stats: " << std::endl;
+         print_voting_stats(haplotype_barcodes_total_mappings);
+         auto winner = ordered_haplotype_barcodes_supporting[0];
+         auto winner_pair = haplotype_ids.size() - 1 -
+                            ordered_haplotype_barcodes_supporting[0];
+         auto winner_mappings = ordered_haplotype_barcodes_total_mappings[0];
+         auto winner_mappings_pair = haplotype_ids.size() - 1 -
+                 ordered_haplotype_barcodes_total_mappings[0];
+         auto barcode_support_winners = std::make_pair(winner,
+                                                       winner_pair);
+         auto kmer_support_winners = std::make_pair(winner_mappings,
+                                                    winner_mappings_pair);
+         std::cout << "barcode winner: " << winner << " "
+                   << winner_pair << std::endl;
+         std::cout << "kmer winner: " <<winner_mappings<< " " << winner_mappings_pair
+                   << std::endl;
+         std::set<prm10xTag_t> s1;
+         std::set<prm10xTag_t> s2;
 
 
-     for (auto h:haplotype_ids[std::get<0>(barcode_support_winners)]){
-        std::cout << h << " ";
-         for (auto l: barcodes_supporting_haplotype[h]) {
-             s1.insert(l);
+         for (auto h:haplotype_ids[winner]) {
+             std::cout << h << " ";
          }
-    }
-     std::cout << std::endl;
-
-     for (auto h:haplotype_ids[std::get<0>(kmer_support_winners)]){
-         std::cout << h << " ";
-     }
-     std::cout << std::endl;
-     for (auto h:haplotype_ids[std::get<1>(barcode_support_winners)]){
-         //std::cout <<oldnames[h] << " ";
-         for (auto l: barcodes_supporting_haplotype[h]) {
+             for (auto l: barcodes_supporting_haplotype[winner]) {
+                 s1.insert(l);
+             }
+         for (auto l: barcodes_supporting_haplotype[winner_pair]) {
              s2.insert(l);
          }
-     }
-     std::cout << std::endl;
 
-     for (auto h:haplotype_ids[std::get<1>(kmer_support_winners)]){
-         std::cout << oldnames[h] << " ";
-     }
-     std::cout << std::endl;
-     for (auto h:haplotype_ids[std::get<1>(barcode_support_winners)]){
-         std::cout <<oldnames[h] << " ";
-     }
-     std::cout << std::endl;
+         std::cout << std::endl;
 
-
-     std::cout << std::endl;
-
-     std::cout << std::endl;
-     std::cout << "barcodes supporting size: " << s1.size() << " " << s2.size() << std::endl;
-     this->barcodes_supporting_winners = std::make_pair(s1, s2);
-     std::cout << "barcodes supporting size: " << std::get<0>(this->barcodes_supporting_winners).size() << " " <<  std::get<1>(this->barcodes_supporting_winners).size() << std::endl;
-
-     if (std::get<0>(barcode_support_winners) == std::get<0>(kmer_support_winners) || std::get<0>(barcode_support_winners) == std::get<1>(kmer_support_winners)){
-         if ( std::get<1>(barcode_support_winners) == std::get<0>(kmer_support_winners) || std::get<1>(barcode_support_winners) == std::get<1>(kmer_support_winners) ){
-             return 1;
-         } else {
-             return 2;
+         for (auto h:haplotype_ids[winner_mappings]) {
+             std::cout << h << " ";
          }
-     } else {
-         return 0;
+         std::cout << std::endl;
+         for (auto h:haplotype_ids[winner_mappings_pair]) {
+             std::cout << oldnames[h] << " ";
+         }
+         std::cout << std::endl;
+         for (auto h:haplotype_ids[winner_pair]) {
+             std::cout << oldnames[h] << " ";
+         }
+         std::cout << std::endl;
+
+
+         std::cout << std::endl;
+         std::cout << "barcodes supporting size: " << s1.size() << " " << s2.size() << std::endl;
+         if (s1.size() == 0){
+             // these all seem to have the pattern aabbccddeeff......
+             for (auto c: haplotype_barcodes_supporting){
+                 std::cout << c << " ";
+             }
+             std::cout << std::endl;
+             for (auto c: haplotype_barcodes_total_mappings){
+                 std::cout << c << " ";
+             }
+             std::cout << std::endl;
+         }
+         // sometimes these are 0- why1?!?
+         this->barcodes_supporting_winners = std::make_pair(s1, s2);
+         std::cout << "barcodes supporting size: " << std::get<0>(this->barcodes_supporting_winners).size() << " "
+                   << std::get<1>(this->barcodes_supporting_winners).size() << std::endl;
+
+         if (winner== winner_mappings||
+             winner == winner_mappings_pair) {
+             if (winner_pair == winner_mappings ||
+                     winner_pair == winner_mappings_pair) {
+                 return 1;
+             } else {
+                 return 2;
+             }
+         } else {
+             return 0;
+         }
      }
+     std::cout << " no relevant mappings" << std::endl;
+     return 0;
  };
 
 double avg(std::vector<int> v){
