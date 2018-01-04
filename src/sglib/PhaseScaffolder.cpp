@@ -225,20 +225,25 @@ void PhaseScaffolder::print_barcode_stats(){
 
 
 void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> > tag_mappings, int min_tag_count=1){
+    // count how many times each barcode maps to each node
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings_int;
     sgNodeID_t counter = 0;
+    //tag mappings, outer index is node id, so for each node, it tells you which barcodes it maps to
     for (auto n: tag_mappings){
 
         for (auto tag:n) {
             node_tag_mappings_int[counter][tag] += 1;
+
         }
         counter += 1;
     }
+
     std::cout << "summed tag mappings: " << node_tag_mappings_int.size() << std::endl;
     int discarded_barodes = 0;
     int kept_barodes = 0;
     for (auto b:node_tag_mappings_int){
         for (auto t:b.second){
+
             if (t.second > min_tag_count){
                 node_tag_mappings[b.first][t.first] = t.second;
                 kept_barodes += 1;
@@ -269,6 +274,7 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
     // with tags mapping to each node, just score by summing for each haplotype
     auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
+    hs.remove_nodes_with_no_barcode_support(sg.tags);
     if (barcodes_map > min_barcodes_mapping) {
         int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support

@@ -22,8 +22,8 @@ public:
     void find_possible_haplotypes(std::vector<std::vector<sgNodeID_t >>);
 
     int score_haplotypes(std::vector<std::string>);
-
-    int decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > >, std::map<prm10xTag_t, std::vector<sgNodeID_t > >  );
+    void remove_nodes_with_no_barcode_support(std::vector< std::vector<prm10xTag_t> > tags_in_node);
+    int decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > >, std::map<prm10xTag_t, std::vector<sgNodeID_t > > );
     std::map<prm10xTag_t, std::map< int, int > > barcode_haplotype_mappings;
     bool success = false; // if doing partial success replace with enum
     std::pair<std::vector<sgNodeID_t >, std::vector< sgNodeID_t > > winners;
