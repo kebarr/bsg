@@ -139,7 +139,7 @@ void PhaseScaffolder::phase_components(int max_bubbles=12, int min_barcodes_mapp
             // part of the issue may be barcodes not covering the entire component
 
             auto bubbles = sg.find_bubbles(component);
-            
+
             if (bubbles.size() > 1) {
                 if (bubbles.size() < max_bubbles) {
 
@@ -255,7 +255,7 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     for (auto bubble:bubbles){
         for (auto b: bubble) {
             std::cout << "b: " << b << " tags: " << sg.tags[b].size() << std::endl;
-            if (sg.tags[b].size() > 0) {
+            if (sg.tags[b].size() > 0) { // this should be identical to not returning bubbles without mappings
                 count_bubble_nodes_with_mappings += 1;
                 relevant_mappings[b] = node_tag_mappings[b];
                 for (auto t: node_tag_mappings[b]) {

@@ -195,8 +195,6 @@ std::vector<std::vector<sgNodeID_t >> SequenceGraph::find_bubbles(std::vector<sg
                 }
 
                // if n is a bubble, other bubble contigs will share source and dest
-                    // nope... but each bubble contig should occur twice...
-
 
                     // if an element is 2nd degree joined to n twice, and linked to the same nodes as n, its in a bubble
                     for (auto j:linked_2nd_degree){
@@ -217,13 +215,7 @@ std::vector<std::vector<sgNodeID_t >> SequenceGraph::find_bubbles(std::vector<sg
                             }
 
                             auto s = j.first > 0 ? j.first:-j.first;
-                            /*std::cout << "j: " << oldnames[s] << " id: " << j.first;
-                            for (auto jhg:joined_j){
-                                auto d = jhg > 0 ? jhg:-jhg;
 
-                                std::cout << " "<< oldnames[d] << " ";
-                            }
-                            std::cout << std::endl;*/
                             if (joined_j.size() == linked_to.size()){
                                 std::vector<sgNodeID_t > joined_vec;
                                 for (auto joined:joined_j){
@@ -238,6 +230,7 @@ std::vector<std::vector<sgNodeID_t >> SequenceGraph::find_bubbles(std::vector<sg
                                 //std::cout << std::endl;
 
                                 if (std::is_permutation(linked_to.begin(), linked_to.end(), joined_vec.begin()) ) {
+
                                     bubble.push_back(j.first);
                                 }
                             }
@@ -250,7 +243,13 @@ std::vector<std::vector<sgNodeID_t >> SequenceGraph::find_bubbles(std::vector<sg
 
         }
         if (bubble.size() > 1){
-            bubbles.push_back(bubble);
+            int sum = 0;
+            for (auto node:bubble){
+                sum += tags[node].size();
+            }
+            if (sum > 0) {
+                bubbles.push_back(bubble);
+            }
         }
     }
     std::cout << "Found " << bubbles.size() << " bubbles in component of " << component.size() << " nodes " <<std::endl;

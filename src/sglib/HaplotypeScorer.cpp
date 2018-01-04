@@ -57,7 +57,7 @@ std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map
         int pair = haplotype_ids.size() - i - 1;
         std::set<sgNodeID_t >  supported_nodes;
         for (auto n:h){
-            std::cout << "node: " << n << " " << node_tag_mappings[n].size() ;
+            //std::cout << "node: " << n << " " << node_tag_mappings[n].size() ;
             if (!node_tag_mappings[n].empty()){
                 // if node is supported by barcodes which also support other nodes in that haplotype
                 // no idea how well it should be!!
@@ -68,11 +68,11 @@ std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map
                         supported_nodes.insert(n);
                         // if a barcode maps to this abd other nodes in this haplotype
                         // then this node is supported by a barcode for rthis haplotype
-                        std::cout << " supported ";
+                        //std::cout << " supported ";
                         break;
                     }
                 }
-                std::cout  << "\n";
+                //std::cout  << "\n";
             }
         }
         auto pre = haplotype_ids_to_ignore.size();
