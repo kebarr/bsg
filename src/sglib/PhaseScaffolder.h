@@ -40,8 +40,10 @@ public:
     void sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> >, int min_tag_count=1);
     std::vector<HaplotypeScorer> phased_components;
     std::vector<HaplotypeScorer> partial_phased_components;
+    std::vector<std::vector<std::vector<sgNodeID_t > > > split_component(std::vector<std::vector<sgNodeID_t >>, int max_bubbles=12);
 
-};
+
+    };
 
 
 #endif //SG_PHASESCAFFOLDER_H

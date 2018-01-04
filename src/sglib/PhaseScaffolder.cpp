@@ -74,6 +74,19 @@ size_t  component_bps(SequenceGraph &sg, std::vector<sgNodeID_t > component){
     return  res;
 }
 
+std::vector<std::vector<std::vector<sgNodeID_t > > > PhaseScaffolder::split_component(std::vector<std::vector<sgNodeID_t >> bubbles, int max_bubbles=12){
+    // bubbles listed in order they appear in component
+    int to_make = bubbles.size()/max_bubbles;
+    std::cout << "splitting componenet with " << bubbles.size() << " bubbles into " << to_make << "subcomponents" << std::endl;
+    std::vector<std::vector<std::vector<sgNodeID_t > >> bubbles_split;
+    for (int i =0 ; i < to_make-1; i++){
+        std::vector<std::vector<sgNodeID_t >> new_bubble(&bubbles[i*max_bubbles], &bubbles[(i+1)*max_bubbles]);
+        bubbles_split.push_back(new_bubble);
+    }
+    return bubbles_split;
+
+}
+
 void PhaseScaffolder::phase_components(int max_bubbles=12) {
 
 //find and phase each component of gfa
@@ -86,7 +99,6 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
     int not_phased = 0;
 
     std::vector<std::pair<size_t, size_t> > comp_sizes;
-    std::ofstream o("previously_solved_contig_names.txt");
 // this finds 2 components for test graph...
     std::cout << "Found " << components.size() << " connected components " << std::endl;
     sum_node_tag_mappings(sg.tags);
@@ -103,7 +115,19 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
             // part of the issue may be barcodes not covering the entire component
 
             auto bubbles = sg.find_bubbles(component);
+            /*for (auto c:component){
+                std::cout << sg.oldnames[c] << " ";
+            }
+            std::cout << std::endl << "bubbles:";
 
+            for (auto b: bubbles){
+                for (auto n: b){
+                    std::cout << sg.oldnames[n] << " ";
+                }
+                std::cout << std::endl;
+
+            }
+            std::cout << std::endl;*/
             if (bubbles.size() > 1) {
                 if (bubbles.size() <= max_bubbles) {
 
@@ -121,6 +145,17 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
                 } else {
                     too_large += 1;
                     // TODO output these and work out how to split up sensibly
+                    auto split = split_component(bubbles);
+                    for (auto sp: split){
+                        int p = phase_component(sp);
+                        if (p == 1) {
+                            phased += 1;
+                        } else if (p == 2){
+                            partial_phased += 1;
+                        } else if (p == 0){
+                            not_phased += 1;
+                        }
+                    }
 
                 }
             } else {
@@ -133,9 +168,9 @@ void PhaseScaffolder::phase_components(int max_bubbles=12) {
 
     std::cout << "Phased " << phased <<  " partial phased " << partial_phased << " not Phased " << not_phased <<  " of " << phaseable << " phaseable components, " << too_large
               << " were too large " << " and " << not_phaseable << " did not contain enough bubbles" << std::endl;
-    intersect_phasings();
+    //intersect_phasings();
     std::cout << "Phased components: " << phased_components.size() << " partyially phased: " << partial_phased_components.size() << std::endl;
-    print_barcode_stats();
+    //print_barcode_stats();
 }
 
 void PhaseScaffolder::print_barcode_stats(){
@@ -204,12 +239,6 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
     int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
-    if (hs.barcode_haplotype_mappings.size() > 0) {
-        //std::cout << "scored haplotypes " << p << std::endl;
-        // p indicates whether scoring was successful, partially succesful or failed
-        //return p;
-    }
-
     if (res == 1){
         phased_components.push_back(hs);
     } else if (res == 2) {

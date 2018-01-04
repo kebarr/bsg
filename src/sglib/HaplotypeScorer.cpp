@@ -102,7 +102,8 @@ void HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std:
         }
     }
 
-
+    this->haplotype_barcodes_supporting = haplotype_barcodes_supporting;
+    this->haplotype_barcodes_total_mappings = haplotype_barcodes_total_mappings;
     std::cout << "Calculated haplotype support for each barcode, total mappings: " << total_mappings<<  std::endl;
 
 }
@@ -136,15 +137,9 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
 
      // need pairs with max barcodes + kmers support
      auto ordered_haplotype_barcodes_supporting = sort_indexes(haplotype_barcodes_supporting);
-     for (auto o:ordered_haplotype_barcodes_supporting){
-         std::cout << o << " " << haplotype_barcodes_supporting[o] << " ";
-     }
-     std::cout << std::endl;
+
      auto ordered_haplotype_barcodes_total_mappings = sort_indexes(haplotype_barcodes_total_mappings);
-     for (auto o:ordered_haplotype_barcodes_total_mappings){
-         std::cout << o << " " << haplotype_barcodes_total_mappings[o] << " ";
-     }
-     std::cout << std::endl;
+
      auto barcode_support_winners = std::make_pair(ordered_haplotype_barcodes_supporting[0], haplotype_ids.size() - 1 - ordered_haplotype_barcodes_supporting[0]);
      auto kmer_support_winners = std::make_pair(ordered_haplotype_barcodes_total_mappings[0], haplotype_ids.size() - 1 - ordered_haplotype_barcodes_total_mappings[0]);
     std::cout << "barcode winner: " << std::get<0>(barcode_support_winners) << " " << std::get<1>(barcode_support_winners) << std::endl;
