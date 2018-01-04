@@ -46,34 +46,41 @@ void print_pair_int_map(std::map<std::pair<int, int> , int> map){
     std::cout << std::endl;
 }
 
-void HaplotypeScorer::remove_nodes_with_no_barcode_support(std::vector< std::vector<prm10xTag_t> > tags_in_node){
+std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::vector< std::vector<prm10xTag_t> > tags_in_node, std::map<size_t , std::map< prm10xTag_t, int>> barcode_haplotype_shared){
     std::cout<< " updating haplotypes to include only supported nodes"<<std::endl;
-
+    std::vector<int> to_ignore;
     // ONLY COUNT NODES THAT ARE VOTED FOR- EG H1 IS 1,2,3,4 BUT NO VOTES FOR 4, AND H2 IS 1,2,3,5 WITH NONE FOR 5- THESE ARE SAME!
-    std::set<std::set<sgNodeID_t > > haplotype_ids_remove_unmapped_nodes;
+    std::vector<std::set<sgNodeID_t > > haplotype_ids_remove_unmapped_nodes;
+    std::set<std::set<sgNodeID_t > > haplotype_ids_to_ignore;
+
     for (int i=0; i< haplotype_ids.size() ; i++){
         auto h= haplotype_ids[i];
+        int pair = haplotype_ids.size() - i - 1;
         std::set<sgNodeID_t >  supported_nodes;
         for (auto n:h){
             if (!tags_in_node[n].empty()){
-                supported_nodes.insert(n);
+                // if node is supported by barcodes which also support other nodes in that haplotype
+                // no idea how well it should be!!
+                for (auto barcode: tags_in_node[n]) {
+                    if (barcode_haplotype_shared[i][barcode] > barcode_haplotype_shared[pair][barcode] * 2)
+                        supported_nodes.insert(n);
+                }
             }
         }
+        auto pre = haplotype_ids_to_ignore.size();
+        haplotype_ids_to_ignore.insert(supported_nodes);
+        auto post = haplotype_ids_to_ignore.size();
+        if (pre == post){
+            to_ignore.push_back(i);
+        }
         //std::cout << "supported nodes : " << supported_nodes.size() <<std::endl;
-        haplotype_ids_remove_unmapped_nodes.insert(supported_nodes);
+        haplotype_ids_remove_unmapped_nodes.push_back(supported_nodes);
     }
     // removing unsupported nodes should collapse combinations which don't have read mappinhgs for each node
     // this shouls stop haplotypes from drawing
-    haplotype_ids.clear();
-    for (auto h: haplotype_ids_remove_unmapped_nodes){
-        std::vector<sgNodeID_t > haplotype;
-        for (auto n:h){
-            haplotype.push_back(n);
-        }
-        haplotype_ids.push_back(haplotype);
-    }
-    std::cout<< "now " << haplotype_ids.size() << " haplotypes"<<std::endl;
-    this-> haplotype_ids = haplotype_ids;
+    // pair numbering won't work if collapsed so just list ones to ignore
+
+    return  to_ignore;
 }
 
 /**
@@ -87,7 +94,7 @@ void HaplotypeScorer::remove_nodes_with_no_barcode_support(std::vector< std::vec
  * then for each node in each haplotype, find barcodes mapping
  */
 
-int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings){
+int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings, std::vector< std::vector<prm10xTag_t> > tags_in_node){
 
     int total_mappings = 0;
     int total_barcodes = 0;
@@ -109,32 +116,39 @@ int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::
         }
         }
 
+    auto to_ignore = remove_nodes_with_no_barcode_support(tags_in_node, barcode_haplotype_shared);
+    // updating haplotypes changes pair indexing!!! aso don't, make list of haplotypes to skip
     haplotype_barcodes_total_mappings.resize(haplotype_ids.size());
     haplotype_barcodes_supporting.resize(haplotype_ids.size());
+    std::cout << "ignoring: " << to_ignore.size() << std::endl;
     // previously found all nodes that a barcode maps to and only considered ones which mapped to enough of the haploype
     // for each haplotype, loop over each node and sum support
     for (int i = 0; i < haplotype_ids.size() ; i++){
-        // to be same as previous, need to check each barcode counted maps to enough nodes in haplotype
-        for (auto node: haplotype_ids[i]){
-            if (node_tag_mappings[node].size() > 1) {// if more than 1 barcode maps tp this node
-                //node_tag_mappings is a map: node_id:barcode_id:number of mappings from that barcode to that node
-                for (auto f:node_tag_mappings[node]) {// assign each barcode mapped to this node to the relevant haplotype
-                    // if this barcode maps to enough nodes in this haplotype
-                    // f.first is barcode
-                    auto barcode = f.first;
-                    if (barcode_haplotype_shared[i][barcode] > node_tag_mappings[node][barcode]/2) {
-                        haplotype_barcodes_supporting[i] += 1;
+        if (std::find(to_ignore.begin(), to_ignore.end(), i) == to_ignore.end()) {
+            int pair = haplotype_ids.size() - i - 1;
+            // to be same as previous, need to check each barcode counted maps to enough nodes in haplotype
+            for (auto node: haplotype_ids[i]) {
+                if (node_tag_mappings[node].size() > 1) {// if more than 1 barcode maps tp this node
+                    //node_tag_mappings is a map: node_id:barcode_id:number of mappings from that barcode to that node
+                    for (auto f:node_tag_mappings[node]) {// assign each barcode mapped to this node to the relevant haplotype
+                        // if this barcode maps to enough nodes in this haplotype
+                        // f.first is barcode
+                        auto barcode = f.first;
+                        // care thst this barcode doesn't map to contigs from lternate phasing
+                        if (barcode_haplotype_shared[i][barcode] > barcode_haplotype_shared[pair][barcode] * 2) {
+                            haplotype_barcodes_supporting[i] += 1;
 
                             haplotype_barcodes_total_mappings[i] += f.second;
                             total_mappings += f.second;
-                        total_barcodes += 1;
-                        if (barcodes_supporting_haplotype[i].size() > 0){
-                            barcodes_supporting_haplotype[i].push_back(barcode);
+                            total_barcodes += 1;
+                            if (barcodes_supporting_haplotype[i].size() > 0) {
+                                barcodes_supporting_haplotype[i].push_back(barcode);
                             } else {
-                            barcodes_supporting_haplotype[i]= {barcode};
+                                barcodes_supporting_haplotype[i] = {barcode};
+
+                            }
 
                         }
-
                     }
                 }
             }
@@ -142,12 +156,15 @@ int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::
     }
 for (int i=0; i < haplotype_barcodes_supporting.size() ; i++){
     if (haplotype_barcodes_supporting[i] > 0 || haplotype_barcodes_total_mappings[i] > 0) {
+        auto ignored = std::find(to_ignore.begin(), to_ignore.end(), i) == to_ignore.end();
         std::cout << "i: " << i << " votes " << haplotype_barcodes_supporting[i] << " kmers "
-                  << haplotype_barcodes_total_mappings[i] << std::endl;
+                  << haplotype_barcodes_total_mappings[i] << " ignored: " << ignored << std::endl;
+        int sum = 0;
         for (auto h: haplotype_ids[i]) {
-            std::cout << h << " ";
+            std::cout << h << ": " << node_tag_mappings[h].size() << " " << tags_in_node[h].size() << " ";
+            sum += node_tag_mappings[h].size();
         }
-        std::cout << std::endl;
+        std::cout << std::endl << " sum: " << sum << std::endl;
     }
 }
     this->haplotype_barcodes_supporting = haplotype_barcodes_supporting;

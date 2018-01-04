@@ -273,8 +273,7 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     hs.find_possible_haplotypes(bubbles);
     std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
     // with tags mapping to each node, just score by summing for each haplotype
-    auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
-    hs.remove_nodes_with_no_barcode_support(sg.tags);
+    auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings, sg.tags);
     if (barcodes_map > min_barcodes_mapping) {
         int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
@@ -318,9 +317,9 @@ void PhaseScaffolder::intersect_phasings(){
         for (int j =0 ; j < phasings.size(); j++){
             auto phasing = phasings[j];
             std::vector<prm10xTag_t > int1;
-            std::set_intersection(phasing.begin(), phasing.end(), c1.begin(), c1.end(), std::back_inserter(int1));
+            std::set_intersection(phasing.begin(), phasing.end(), c1.begin(), c1.end(), std::inserter(int1, int1.begin()));
             std::vector<prm10xTag_t > int2;
-            std::set_intersection(phasing.begin(), phasing.end(), c2.begin(), c2.end(), std::back_inserter(int2));
+            std::set_intersection(phasing.begin(), phasing.end(), c2.begin(), c2.end(), std::inserter(int2, int2.begin()));
             std::cout << "j: " << j << " i: " << i << " int1 size: " << int1.size() << " int2 size: " << int2.size();
             if (int1.size() > best_phasing1[1]){
                 best_phasing1 = {j, int1.size()}; // this loses which phasing it was but don't think that matters
