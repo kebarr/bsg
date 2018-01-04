@@ -46,7 +46,19 @@ void print_pair_int_map(std::map<std::pair<int, int> , int> map){
     std::cout << std::endl;
 }
 
+/**
+ *
+ *
+ * @brief
+ * don't double count haplotypes that only differ on nodes with no mappings
+ * @return
+ * list of indexes of haplotypes that can be ignored
+ *
+ * */
+
 std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<size_t , std::map< prm10xTag_t, int>> barcode_haplotype_shared){
+    // arbitrary rule about how many nodes we should map to tto consider haplotype
+    int min_nodes_supported_per_halotype = haplotype_ids[0].size()/2;
     std::cout<< " updating haplotypes to include only supported nodes"<<std::endl;
     std::vector<int> to_ignore;
     // ONLY COUNT NODES THAT ARE VOTED FOR- EG H1 IS 1,2,3,4 BUT NO VOTES FOR 4, AND H2 IS 1,2,3,5 WITH NONE FOR 5- THESE ARE SAME!
@@ -63,6 +75,9 @@ std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map
                 // no idea how well it should be!!
                 for (auto barcode_count: node_tag_mappings[n]) {
                     auto barcode = barcode_count.first;
+                    /*if (n == 562|| n==563 || n==565 || n==566){
+                        std::cout << "barcode_haplotype_shared[i][barcode] " << barcode_haplotype_shared[i][barcode] << "  barcode_haplotype_shared[pair][barcode] * 2 " <<  barcode_haplotype_shared[pair][barcode] * 2 <<std::endl;
+                    }*/
                     if (barcode_haplotype_shared[i][barcode] > barcode_haplotype_shared[pair][barcode] * 2) {
                         // can't differentiate between haplotypes with the same supported nodes, but different unsupported nodes so treat as the same
                         supported_nodes.insert(n);
@@ -78,8 +93,54 @@ std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map
         auto pre = haplotype_ids_to_ignore.size();
         haplotype_ids_to_ignore.insert(supported_nodes);
         auto post = haplotype_ids_to_ignore.size();
-        if (pre == post){
+        if (pre == post || supported_nodes.size() < min_nodes_supported_per_halotype){
+            //std::cout << "min_nodes_supported_per_halotype " << min_nodes_supported_per_halotype << " supported_nodes.size() " << supported_nodes.size() << std::endl;
+            //td::cout << " supported_nodes.size() " << supported_nodes.size() << " barcode_haplotype_shared"  << barcode_haplotype_shared[i].size() << " barcode_haplotype_shared pair"  << barcode_haplotype_shared[pair].size() << std::endl;
+
             to_ignore.push_back(i);
+
+        }
+    }
+    if (to_ignore.size() == haplotype_ids.size() ||  to_ignore.size() == haplotype_ids.size()-1){
+        std::cout<<  "to_ignore.size()"<< to_ignore.size()  << " " << haplotype_ids.size() << std::endl;
+                 std::set<sgNodeID_t > seen;
+        size_t seen_size = seen.size();
+        int total = 0;
+        int nonzero_nodes = 0;
+        int ch = 0;
+        for (auto h:haplotype_ids){
+            int total = 0;
+            int nonzero_nodes = 0;
+            for (auto i: h){
+                seen.insert(i);
+                size_t new_seen_size = seen.size();
+                if (new_seen_size != seen_size) {
+                    std::cout<< "i: " << i << " ";
+                    if (node_tag_mappings[i].size() > 0){
+                        nonzero_nodes += 1;
+                    }
+                    for (auto b: node_tag_mappings[i]) {
+                        std::cout << b.first << " " << b.second << " ";
+                        total += b.second;
+
+                    }
+                    std::cout << "    barcode_haplotype_shared: " ;
+                    for (auto b:barcode_haplotype_shared[i]){
+                        std::cout << b.first << " " << b.second << " ";
+
+                    }
+                    std::cout<< std::endl;
+
+                }
+                seen_size = new_seen_size;
+            }
+
+            if (total > 0) {
+                std::cout << ch << " total: " << total << "\n";
+            } if (nonzero_nodes > 0){
+                std::cout <<"phasing" <<  ch << " nonzero nodes: " << nonzero_nodes << "\n";
+            }
+            ch += 1;
         }
     }
     // removing unsupported nodes should collapse combinations which don't have read mappinhgs for each node
@@ -114,6 +175,7 @@ int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::
         for (int i = 0; i < haplotype_ids.size() ; i++) {
             for (auto l: nodes) {
                 if (std::find(haplotype_ids[i].begin(), haplotype_ids[i].end(), l) != haplotype_ids[i].end()) {
+                    // this is only ever 1 in my stdout, but should equal number of nodes in haplotype that barcode maps to
                     barcode_haplotype_shared[i][barcode] += 1;
 
                 }
@@ -167,7 +229,7 @@ for (int i=0; i < haplotype_barcodes_supporting.size() ; i++){
                   << haplotype_barcodes_total_mappings[i] << " ignored: " << ignored << std::endl;
         int sum = 0;
         for (auto node: haplotype_ids[i]) {
-            std::cout << "total barcodes > min threshold mappings to: " << node << " : " << node_tag_mappings[node].size() << std::endl;
+            //std::cout << "total barcodes > min threshold mappings to: " << node << " : " << node_tag_mappings[node].size() << std::endl;
             sum += node_tag_mappings[node].size();
         }
         std::cout << std::endl << " sum: " << sum << std::endl;
@@ -179,11 +241,28 @@ for (int i=0; i < haplotype_barcodes_supporting.size() ; i++){
     std::cout << haplotype_barcodes_supporting[0] << " " << haplotype_barcodes_supporting[1] << std::endl;
     std::cout << haplotype_barcodes_total_mappings[0] << " " << haplotype_barcodes_total_mappings[1] << std::endl;
 
-              std::cout << "haplotype_barcodes_supporting.size() "<< haplotype_barcodes_supporting.size() <<  std::endl;
-    std::cout << "haplotype_barcodes_total_mappings.size() "<< haplotype_barcodes_total_mappings.size() <<  std::endl;
-
     std::cout << "barcodes_supporting_haplotype.size() "<< barcodes_supporting_haplotype.size() <<  std::endl;
+    //if(barcodes_supporting_haplotype.size() == 0){
+        for (auto b:barcode_haplotype_shared){
+            //std::cout << b.first << ": ";
+            for (auto c: b.second){
+                if (c.second > 1 ){
+                    std::cout << b.first << " " << c.first << " " << c.second <<std::endl;
+                }
+                //std::cout << c.first << " " << c.second << " ";
 
+            }
+        }
+    for (auto b:barcodes_supporting_haplotype){
+        std::cout << "bbbbb" << b.first << ": ";
+        for (auto c: b.second){
+
+            std::cout << c << " ";
+
+        }
+        std::cout <<std::endl;
+    }
+    //}
     std::cout << "Calculated haplotype support for each barcode, total mappings: " << total_mappings<< "total barcodes: " << total_barcodes <<  std::endl;
     return  total_barcodes;
 }
@@ -237,21 +316,7 @@ void HaplotypeScorer::print_voting_stats(std::vector<int> vote_totals){
      std::cout << ordered_haplotype_barcodes_supporting[0] << " won with score " << haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[0]] << " " << ordered_haplotype_barcodes_supporting[1] << " runner up with score " << haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[1]] << std::endl;
      std::cout << ordered_haplotype_barcodes_total_mappings[0] << " won with score "  << haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[0]] << " " << ordered_haplotype_barcodes_total_mappings[1] << " runner up  with score "  <<haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[1]] << std::endl;
 
-     /*for (int i = 0 ; i < ordered_haplotype_barcodes_supporting.size() ; i++){
 
-         if (haplotype_barcodes_supporting[i] > 0){
-             std::cout << "h: " << haplotype_barcodes_supporting[i]  << " " << i << " ";
-         }
-
-     }
-     std::cout << std::endl;
-     for (int i = 0 ; i < ordered_haplotype_barcodes_total_mappings.size() ; i++){
-
-         if (haplotype_barcodes_total_mappings[i] > 0){
-             std::cout << "h: " << haplotype_barcodes_total_mappings[i]  << " " << i << " ";
-         }
-     }
-     std::cout << std::endl;*/
     // if there was a vote (rather than 0 barcodes for each haplotype) and no tie, check winner
      if (haplotype_barcodes_supporting[ordered_haplotype_barcodes_supporting[0]] >0 && haplotype_barcodes_total_mappings[ordered_haplotype_barcodes_total_mappings[0]] > 0) {
 
@@ -335,12 +400,43 @@ void HaplotypeScorer::print_voting_stats(std::vector<int> vote_totals){
                  } else {
                      return 2;
                  }
+             } else if (winner == winner_mappings ||
+                            winner == winner_mappings_pair){
+                     return  2;
              } else {
                  return 0;
              }
          } else {
              auto winners_supporting = select_nodes_from_draw(ordered_haplotype_barcodes_supporting);
              auto winners_total_supporting = select_nodes_from_draw(ordered_haplotype_barcodes_total_mappings);
+             size_t match_len = 0;
+             size_t  par_match_len =0;
+             int limit = std::get<0>(winners_supporting).size() >= std::get<0>(winners_total_supporting).size() ? std::get<0>(winners_supporting).size(): std::get<0>(winners_total_supporting).size();
+             for (int w=0; w < limit; w++){
+                 auto s0 = std::get<0>(winners_supporting)[w];
+                 auto s1 = std::get<1>(winners_supporting)[w];
+                 auto t0 = std::get<0>(winners_total_supporting)[w];
+                 auto t1 = std::get<1>(winners_total_supporting)[w];
+
+             if (s0 == t0 && s1 == t1 ) {
+                 if (s1==t0 && s0 == t1){
+
+                     match_len += 1;
+                 } else {
+                     par_match_len += 1;
+                 }
+
+                } else if (s1==t0 && s0 == t1){
+                 par_match_len += 1;
+                }
+             }
+             if (match_len == limit ) {
+                 return 1;
+             } else if (par_match_len == limit){
+                 return  2;
+             } else {
+                 return  0;
+             }
 
 
          }

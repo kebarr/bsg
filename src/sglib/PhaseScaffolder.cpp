@@ -264,7 +264,7 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
             }
 
         }
-        if (count_bubble_nodes_with_mappings > 1){// can't phase unless there's evidence for at least one of the  sudes
+        if (count_bubble_nodes_with_mappings >= 1){// can't phase unless there's evidence for at least one of the  sudes
             bubbles_final.push_back(bubble);
         }
 

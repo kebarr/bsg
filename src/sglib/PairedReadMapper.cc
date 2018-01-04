@@ -113,6 +113,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                 reads_in_node[mapping.node].push_back(mapping);
                 //tags_in_node[mapping.node].push_back()
 
+                // this should be on mapper, not graph
                 sg.tags[mapping.node].push_back(read_to_tag[mapping.read_id]);
                 ++mapped_count;
             }

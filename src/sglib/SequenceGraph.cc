@@ -243,13 +243,8 @@ std::vector<std::vector<sgNodeID_t >> SequenceGraph::find_bubbles(std::vector<sg
 
         }
         if (bubble.size() > 1){
-            int sum = 0;
-            for (auto node:bubble){
-                sum += tags[node].size();
-            }
-            if (sum > 0) {
+
                 bubbles.push_back(bubble);
-            }
         }
     }
     std::cout << "Found " << bubbles.size() << " bubbles in component of " << component.size() << " nodes " <<std::endl;
