@@ -37,8 +37,8 @@ public:
 
         private:
     void print_barcode_stats();
-    int phase_component (std::vector<std::vector<sgNodeID_t >>, int min_barcodes_mapping=10);
-    std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings;
+    int phase_component (std::vector<std::vector<sgNodeID_t >>, int min_barcodes_mapping=2);
+    std::map< sgNodeID_t, std::map< prm10xTag_t, int > > node_tag_mappings;
     void sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> >, int min_tag_count=1);
     std::vector<HaplotypeScorer> phased_components;
     std::vector<HaplotypeScorer> partial_phased_components;

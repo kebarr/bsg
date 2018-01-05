@@ -74,11 +74,14 @@ std::vector<std::vector<sgNodeID_t >> HaplotypeScorer::find_supported_nodes(std:
             auto tags_mapped_to = node_tag_mappings[node];
             bool confirmed_phaseable = false;
             for (auto t:tags_mapped_to) {
+                // majority of barcodes map to single node
                 std::cout << t.first << " maps to node:  " << t.second << "times, and maps to other nodes:";
                 for (auto b: barcode_node_mappings[t.first]){
+
                     std::cout << " " << b << " ";
                 }
                 std::cout << std::endl;
+
                 if (barcode_node_mappings[t.first].size() > 1) {
                     std::cout << "phaseable " << std::endl;
                     // node is mapped to barcode which maps to other nodes, so is phaseable
@@ -119,11 +122,9 @@ std::map<size_t , std::map< prm10xTag_t, int>> HaplotypeScorer::count_barcode_ha
                     // this is only ever 1 in my stdout, but should equal number of nodes in haplotype that barcode maps to
                     barcode_haplotype_shared[i][barcode] += 1;
 
-
                 }
 
             }
-
         }
     }
     return  barcode_haplotype_shared;
@@ -142,6 +143,7 @@ std::map<size_t , std::map< prm10xTag_t, int>> HaplotypeScorer::count_barcode_ha
 
 
 int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings_in, std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings){
+    std::cout << "calculating support from each barcodes for " << haplotype_ids.size() << " haplotypes \n";
     node_tag_mappings =node_tag_mappings_in;
     //auto to_ignore = remove_nodes_with_no_barcode_support(node_tag_mappings, barcode_haplotype_shared);
     // updating haplotypes changes pair indexing!!! aso don't, make list of haplotypes to skip
@@ -167,11 +169,18 @@ int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::
                             haplotype_barcodes_supporting[i] += 1;
                             for (auto node: haplotype_ids[i]) {
                                 // for each node i hap, add mappings from reads with this barcode
-                                if (node_tag_mappings[node][barcode] >0) {// if more than 1 barcode maps tp this node
+                                if (node_tag_mappings[node][barcode] > 1) {// if more than 1 barcode maps tp this node
                                     haplotype_barcodes_total_mappings[i] += node_tag_mappings[node][barcode];
                                     // number of kmers mapped to that haploty[e from reads with that barcode
                                     total_mappings += node_tag_mappings[node][barcode];
                                 }
+                            }
+                                std::cout << " nnnnnnnnnnnnnnnn \n";
+                                std::cout << "barcode contributing: " << barcode << " " << barcode_node_mappings[barcode].size() << " to hap " << i << std::endl;
+                                for (auto k:barcode_node_mappings[barcode]){
+                                    std::cout << k << " ";
+                                }
+                                std::cout << "\n";
                             total_barcodes += 1;
                             if (barcodes_supporting_haplotype[i].size() > 0) {
                                 barcodes_supporting_haplotype[i].push_back(barcode);
@@ -179,9 +188,8 @@ int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::
                                 barcodes_supporting_haplotype[i] = {barcode};
 
                             }
-                        }
+
                     }
-                    //node_tag_mappings is a map: node_id:barcode_id:number of mappings from that barcode to that node
 
                 }
             }
@@ -481,7 +489,9 @@ void HaplotypeScorer::find_possible_haplotypes(std::vector<std::vector<sgNodeID_
     auto bubbles_supported = find_supported_nodes(bubbles_in, node_tag_mappings, barcode_node_mappings);
     // above results in nothing being phaseable- because lots of barcodes only map to single node
     //auto bubbles_supported = bubbles_in;
-    bubbles = bubbles_supported;
+    // fr time being so that i can use these reads for next bit
+    bubbles_supported = bubbles_in;
+    bubbles = bubbles_in;
     if (bubbles_supported.size() > 1) {
         // algorithm: https://stackoverflow.com/questions/1867030/combinations-of-multiple-vectors-elements-without-repetition
         size_t P = 1;

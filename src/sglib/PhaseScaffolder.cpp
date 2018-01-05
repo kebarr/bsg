@@ -214,13 +214,13 @@ void PhaseScaffolder::print_barcode_stats(){
 
 void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> > tag_mappings, int min_tag_count=1){
     // count how many times each barcode maps to each node
-    std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings_int;
+    std::map< prm10xTag_t, std::map<sgNodeID_t, int > > node_tag_mappings_int;
     sgNodeID_t counter = 0;
     //tag mappings, outer index is node id, so for each node, it tells you which barcodes  map to it
     for (auto n: tag_mappings){
 
         for (auto tag:n) {
-            node_tag_mappings_int[counter][tag] += 1;
+            node_tag_mappings_int[tag][counter] += 1;
 
         }
         counter += 1;
@@ -230,63 +230,72 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
     int discarded_barodes = 0;
     int kept_barodes = 0;
     for (auto b:node_tag_mappings_int){
-        for (auto t:b.second){//b.second tag: number of times that tag maps to that node
+        //if (b.second.size() >= 2) {// if barcode maps to more than 2 nodes
+            for (auto t:b.second) {//b.second tag: number of times that tag maps to that node
 
-            if (t.second > min_tag_count){//t.secod : number of times that tag maps to that node
-                // node id: barcode: count
-                node_tag_mappings[b.first][t.first] = t.second;
-                kept_barodes += 1;
-            } else {
-                discarded_barodes += 1;
+                if (t.second > min_tag_count) {//t.secod : number of times that tag maps to that node
+                    // node id: barcode: count
+                    node_tag_mappings[t.first][b.first] = t.second;
+                    kept_barodes += 1;
+                } else {
+                    discarded_barodes += 1;
+                }
+
             }
-
-        }
+        //}
     }
     std::cout << "filtered tag mappings: " << node_tag_mappings.size() << " discarded " << discarded_barodes << " barcodes and kept " << kept_barodes << std::endl;
 
 };
 
-int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, int min_barcodes_mapping=10){
+int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, int min_barcodes_mapping=2){
     HaplotypeScorer hs;
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
-    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings_initial;
     std::vector<std::vector<sgNodeID_t >> bubbles_final;
+    std::vector <sgNodeID_t> bubble_nodes;
     for (auto bubble:bubbles){
         int count_bubble_nodes_with_mappings= 0;
 
         for (auto b: bubble) {
             if (sg.tags[b].size() > 0) { // bubble contig mapped to at least 1tag
                 count_bubble_nodes_with_mappings += 1;
-                // b = node id, t.first =  barcode: t.second = count
-                for (auto t: node_tag_mappings[b]) {
-                    barcode_node_mappings_initial[t.first].insert(b);
-                }
+
             }
 
         }
         if (count_bubble_nodes_with_mappings >= bubble.size() - 1){// can't phase unless there's evidence for at least one of the sides
             bubbles_final.push_back(bubble);
-        }
-
-    }
-    std::cout << "found " << barcode_node_mappings_initial.size() << " barcodes \n";
-    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings;
-
-
-    for (auto b:barcode_node_mappings_initial){
-        if (b.second.size() > 1){
-            barcode_node_mappings[b.first] = b.second;
-            for (auto c:b.second) {
-                relevant_mappings[c] = node_tag_mappings[c];
-            } /*
-            std::cout << b.first << " ";
-            for (auto a:b.second){
-                std::cout << a << " ";
+            for (auto b:bubble) {
+                bubble_nodes.push_back(b);
             }
-            std::cout << std::endl;*/
+        }
+
+    }
+    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings_int;
+    // want barcodes which map to at least 2 nodes
+    for (auto node:bubble_nodes){
+        std::set<sgNodeID_t > intermediate;
+            for (auto t: node_tag_mappings[node]) {
+                barcode_node_mappings_int[t.first].insert(node);
+            }
+            relevant_mappings[node] = node_tag_mappings[node];
+
+
+
+    }
+    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings;
+    for (auto b:barcode_node_mappings_int){
+        if (b.second.size()>=2){
+            barcode_node_mappings[b.first] = b.second;
+            std::cout << b.first << " ";
+            for (auto s:b.second){
+                std::cout << s << " ";
+            }
+            std::cout << std::endl;
         }
     }
-    std::cout << "after removing mappings to single node  " << barcode_node_mappings.size() << " barcodes \n";
+
+    std::cout << "found  " << barcode_node_mappings.size() << " barcodes mapping to bubble nodes\n";
 
     std::cout << "bubbles size " << bubbles.size() << " bubbles final: " << bubbles_final.size() << std::endl;
     if (bubbles_final.size() > 1) {
