@@ -17,13 +17,13 @@ PhaseScaffolder::PhaseScaffolder(SequenceGraph & sg): sg(sg), mapper(sg){
 
 void PhaseScaffolder::load_mappings(std::string r1_filename, std::string r2_filename, std::string fasta_filename, uint64_t max_mem_gb, std::string to_map=""){
 
-    /*mapper.map_reads(r1_filename, r2_filename, prm10x, max_mem_gb);
+    mapper.map_reads(r1_filename, r2_filename, prm10x, max_mem_gb);
     std::cout << "Mapped " << mapper.read_to_node.size() << " reads to " <<  mapper.reads_in_node.size() << "nodes" << std::endl;
     if (to_map.size()>0){
         std::cout << "Writing mappings to disk" << std::endl;
         mapper.save_to_disk(to_map);
     }
-    mapper.print_stats();*/
+    mapper.print_stats();
 }
 
 void PhaseScaffolder::load_mappings_from_file(std::string filename){
@@ -342,7 +342,7 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
 
 void PhaseScaffolder::intersect_phasings(){
     std::cout << "intersecting " << phased_components.size() << " phasings" << std::endl;
-    int min_intersections = 10; // arbitrary, test
+    int min_intersections = 1; // arbitrary, test
     std::vector<HaplotypeScorer> phased_components_all;
     for (auto c: phased_components){
         phased_components_all.push_back(c);
@@ -373,12 +373,21 @@ void PhaseScaffolder::intersect_phasings(){
         barcodes.insert(b.first);
     }
     std::set<prm10xTag_t > b1;
+    std::set<prm10xTag_t > b1_common;
     std::set<prm10xTag_t > b2;
+    std::set<prm10xTag_t > b2_common;
+
     int cutoff = barcodes.size()/2;
     int i = 0;
     for ( auto bar:barcodes){
-        if (i < cutoff){
+        if (i < 10){
+            b1_common.insert(bar);
             b1.insert(bar);
+        } else  if (i < cutoff){
+            b1.insert(bar);
+        } else if (i < cutoff + 10){
+            b2_common.insert(bar);
+            b2.insert(bar);
         } else {
             b2.insert(bar);
         }
@@ -388,6 +397,9 @@ void PhaseScaffolder::intersect_phasings(){
             std::set<prm10xTag_t >::const_iterator iter1(b1.begin());
     std::set<prm10xTag_t >::const_iterator iter2(b2.begin());
 
+    std::set<prm10xTag_t >::const_iterator iter11(b1_common.begin());
+    std::set<prm10xTag_t >::const_iterator iter22(b2_common.begin());
+
     std::cout << "barcodes: " << barcodes.size() << " b1: " << b1.size() << " b2:  " << b2.size() << std::endl;
     int counter = 0;
     for (int j = 0; j < 10  ; j++) {
@@ -395,8 +407,8 @@ void PhaseScaffolder::intersect_phasings(){
         std::set<prm10xTag_t> t2;
         for (int i = 0; i < 12; i++) {
             std::advance(iter1, 1);
-            std::advance(iter2, 2);
-            if (!counter%5 == 0) {
+            std::advance(iter2, 1);
+            if (!counter % 5 == 0) {
                 t1.insert(*iter1);
                 t2.insert(*iter2);
 
@@ -406,13 +418,21 @@ void PhaseScaffolder::intersect_phasings(){
                 t1.insert(*iter2);
 
             }
+            if (i%3==0){
+                std::advance(iter11, 1);
+                std::advance(iter22, 1);
+                t1.insert(*iter11);
+                t2.insert(*iter22);
+
+            }
             counter += 1;
 
 
         }
-        std::pair<std::set<prm10xTag_t>, std::set<prm10xTag_t>>  tp = std::make_pair(t1, t2);
+
+        std::pair<std::set<prm10xTag_t>, std::set<prm10xTag_t>> tp = std::make_pair(t1, t2);
         test.push_back(tp);
-        std::cout << " t last" << std::get<0>(test[test.size() -1]).size() << std::endl;
+        std::cout << " t last" << std::get<0>(test[test.size() - 1]).size() << " t1 size " << t1.size() << " t2 size " << t2.size() <<std::endl;
     }
     std::cout << " t last" << std::get<0>(test[test.size() -1]).size() <<  std::endl;
 
@@ -428,8 +448,16 @@ void PhaseScaffolder::intersect_phasings(){
         auto c1 = std::get<0>(test[i]);
         auto c2 = std::get<1>(test[i]);
 
-        std::vector<unsigned long> best_phasing1 = {-1, -1};// index in list of phased blocks, size of intersection
-        std::vector<unsigned long > best_phasing2 = {-1, -1};
+        std::vector<int> best_phasing1;// = {-1, -1};// index in list of phased blocks, size of intersection
+        std::vector<int> best_phasing2;// = {-1, -1};
+        best_phasing1.push_back(-1);
+        best_phasing1.push_back(-1);
+        best_phasing2.push_back(-1);
+        best_phasing2.push_back(-1);
+
+        std::cout << "best_phasing1[0] " << best_phasing1[0] << " " << best_phasing1[1] << " " <<  best_phasing1.size()<< std::endl;
+        std::cout << "best_phasing2[0] " << best_phasing2[0] << " " << best_phasing2[1] << " " <<  best_phasing2.size() << std::endl;
+
         std::cout << "barcides supporting hap 1 of comp " << i << " " << c1.size() << std::endl;
         for (auto c:c1){
             std::cout << c << " ";
@@ -447,12 +475,26 @@ void PhaseScaffolder::intersect_phasings(){
             std::set_intersection(phasing.begin(), phasing.end(), c1.begin(), c1.end(), std::inserter(int1, int1.begin()));
             std::vector<prm10xTag_t > int2;
             std::set_intersection(phasing.begin(), phasing.end(), c2.begin(), c2.end(), std::inserter(int2, int2.begin()));
-            std::cout << "j: " << j << " i: " << i << " int1 size: " << int1.size() << " int2 size: " << int2.size()<< std::endl;
-            if (int1.size() > best_phasing1[1]){
-                best_phasing1 = {j, int1.size()}; // this loses which phasing it was but don't think that matters
+            std::cout << "j: " << j << " i: " << i << " int1 size: " << int1.size() << " int2 size: " << int2.size()<< " best_phasing1[0]  "<< best_phasing1[0] << " best_phasing1[1]  "<< best_phasing1[1] <<  std::endl;
+            std::cout << "j: " << j << " i: " << i << " int1 size: " << int1.size() << " int2 size: " << int2.size()<< " best_phasing1[0]  "<< best_phasing2[0] << " best_phasing1[1]  "<< best_phasing2[1] <<  std::endl;
+            std::cout << int1.size()  << " " << best_phasing1[1] << " "  << int1.size() +  best_phasing1[1] <<  " \n";
+            std::cout << int2.size()  << " " << best_phasing2[1] << " "  << int2.size() +  best_phasing2[1] << " \n";
+
+            if ((int)int1.size() > best_phasing1[1]){
+                std::cout << "new best 1: " << j << "\n";
+                          best_phasing1 = {j, int1.size()}; // this loses which phasing it was but don't think that matters
             }
-            if (int2.size() > best_phasing2[1]){
+            if ((int)int1.size() < best_phasing1[1] ){
+                std::cout << "!!!new best 1: " << int1.size()  << " " << best_phasing1[1] << "\n";
+            }
+            if ((int)int2.size() > best_phasing2[1]){
+                std::cout << "new best 2: " << j << "\n";
+
                 best_phasing2 = {j, int2.size()};
+            }
+
+            if ((int)int2.size() < best_phasing2[1] ){
+                std::cout << "!!! new best 2: " << int2.size()  << " " << best_phasing2[1] << "\n";
             }
             int shared1 = 0;
             int shared2 = 0;
@@ -470,20 +512,24 @@ void PhaseScaffolder::intersect_phasings(){
                 }
 
             }
-            std::cout << "j: " << j << " i: " << i << " " << shared1 << " " << shared2 << std::endl;
+            std::cout << "j: " << j << " i: " << i << " int sizes 1:  " << shared1 << ",  " << int1.size() << " 2:  "<< shared2 << ", " << int2.size() << std::endl;
 
 
         }
+        std::cout << "best_phasing1[0] " << best_phasing1[0] << " " << best_phasing1[1] << std::endl;
+        std::cout << "best_phasing2[0] " << best_phasing2[0] << " " << best_phasing2[1] << std::endl;
+
         if (best_phasing1[0] == -1 && best_phasing1[1] == -1 ){
             phasings.push_back(c1);
         } else if (best_phasing1[0] != best_phasing2[0]) {
             if (best_phasing1[1] >= min_intersections) {
-
+                std::cout << " adding 1 to " << best_phasing1[0] << std::endl;
                 for (auto c:c1) {
                     phasings[best_phasing1[0]].insert(c);
                 }
             } else {
                 phasings.push_back(c1);
+                std::cout << " newphasing for 1 \n";
 
             }
             if (best_phasing2[1] >= min_intersections) {
@@ -493,6 +539,8 @@ void PhaseScaffolder::intersect_phasings(){
                 }
             } else {
                 phasings.push_back(c2);
+                std::cout << " newphasing for 2 \n";
+
             }
         } else if (best_phasing2[0] == -1 && best_phasing2[1] == -1 ){
             phasings.push_back(c2);
