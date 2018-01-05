@@ -59,18 +59,30 @@ std::vector<std::vector<sgNodeID_t >> HaplotypeScorer::find_supported_nodes(std:
     for (auto bubble:bubbles){
         int phaseable_for_bubble = 0;
         for (auto node: bubble) {
+            std::cout << node << ": ";
             auto tags_mapped_to = node_tag_mappings[node];
+            bool confirmed_phaseable = false;
             for (auto t:tags_mapped_to) {
+                std::cout << t.first << " maps to node:  " << t.second << "times, and maps to other nodes:";
+                for (auto b: barcode_node_mappings[t.first]){
+                    std::cout << " " << b << " ";
+                }
+                std::cout << std::endl;
                 if (barcode_node_mappings[t.first].size() > 1) {
+                    std::cout << "phaseable " << std::endl;
                     // node is mapped to barcode which maps to other nodes, so is phaseable
                     phaseable.push_back(node);
                     phaseable_for_bubble += 1;
+                    // know this node is phaseable, so ove to next
+                    confirmed_phaseable = true;
                     break;
 
                 } else {
                     not_phaseable.push_back(node);
-                    break;
                 }
+            }
+            if (confirmed_phaseable){
+                break;
             }
         }
         if (phaseable_for_bubble >= bubble.size() -1){
@@ -185,7 +197,7 @@ this->node_tag_mappings =node_tag_mappings;
     }
 
     for (auto node: barcode_node_mappings){
-        std::cout << node.first << " ";
+        std::cout << node.first << " " << node.second.size() << " ";
         for (auto b:node.second){
             std::cout << b << " ";
         }
@@ -513,8 +525,8 @@ double stdev(std::vector<int> v, double mean){
 
 
 void HaplotypeScorer::find_possible_haplotypes(std::vector<std::vector<sgNodeID_t >> bubbles, std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings){
-    //auto bubbles_supported = find_supported_nodes(bubbles, node_tag_mappings, barcode_node_mappings);
-    auto bubbles_supported = bubbles;
+    auto bubbles_supported = find_supported_nodes(bubbles, node_tag_mappings, barcode_node_mappings);
+    //auto bubbles_supported = bubbles;
     this->bubbles = bubbles_supported;
     // algorithm: https://stackoverflow.com/questions/1867030/combinations-of-multiple-vectors-elements-without-repetition
     size_t P = 1;
