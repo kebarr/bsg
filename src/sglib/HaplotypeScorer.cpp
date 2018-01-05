@@ -116,6 +116,7 @@ std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map
                 size_t new_seen_size = seen.size();
                 if (new_seen_size != seen_size) {
                     std::cout<< "i: " << i << " ";
+                    // node id: barcode: count
                     if (node_tag_mappings[i].size() > 0){
                         nonzero_nodes += 1;
                     }

@@ -251,16 +251,21 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
     std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings;
     std::vector<std::vector<sgNodeID_t >> bubbles_final;
-    int count_bubble_nodes_with_mappings= 0;
     for (auto bubble:bubbles){
+        int count_bubble_nodes_with_mappings= 0;
+
         for (auto b: bubble) {
-            std::cout << "b: " << b << " tags: " << sg.tags[b].size() << std::endl;
+            std::cout << "b: " << b << " tags: " << sg.tags[b].size() << " node_tag_mappings[b] " << node_tag_mappings[b].size() << std::endl;
             if (sg.tags[b].size() > 0) { // this should be identical to not returning bubbles without mappings
                 count_bubble_nodes_with_mappings += 1;
                 relevant_mappings[b] = node_tag_mappings[b];
                 for (auto t: node_tag_mappings[b]) {
                     barcode_node_mappings[t.first].push_back(b);
                 }
+                for (auto k: sg.tags[b]) {
+                    std::cout << k << " "<<std::endl;
+                }
+                std::cout << std::endl;
             }
 
         }
@@ -324,7 +329,7 @@ void PhaseScaffolder::intersect_phasings(){
             std::set_intersection(phasing.begin(), phasing.end(), c1.begin(), c1.end(), std::inserter(int1, int1.begin()));
             std::vector<prm10xTag_t > int2;
             std::set_intersection(phasing.begin(), phasing.end(), c2.begin(), c2.end(), std::inserter(int2, int2.begin()));
-            std::cout << "j: " << j << " i: " << i << " int1 size: " << int1.size() << " int2 size: " << int2.size();
+            std::cout << "j: " << j << " i: " << i << " int1 size: " << int1.size() << " int2 size: " << int2.size()<< std::endl;
             if (int1.size() > best_phasing1[1]){
                 best_phasing1 = {j, int1.size()}; // this loses which phasing it was but don't think that matters
             }
