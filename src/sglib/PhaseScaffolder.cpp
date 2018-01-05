@@ -249,34 +249,30 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
 int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, int min_barcodes_mapping=10){
     HaplotypeScorer hs;
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
-    std::map<prm10xTag_t, std::vector<sgNodeID_t > > barcode_node_mappings;
+    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings;
     std::vector<std::vector<sgNodeID_t >> bubbles_final;
     for (auto bubble:bubbles){
         int count_bubble_nodes_with_mappings= 0;
 
         for (auto b: bubble) {
-            std::cout << "b: " << b << " tags: " << sg.tags[b].size() << " node_tag_mappings[b] " << node_tag_mappings[b].size() << std::endl;
-            if (sg.tags[b].size() > 0) { // this should be identical to not returning bubbles without mappings
+            if (sg.tags[b].size() > 0) { // bubble contig mapped to at least 1tag
                 count_bubble_nodes_with_mappings += 1;
                 relevant_mappings[b] = node_tag_mappings[b];
                 for (auto t: node_tag_mappings[b]) {
-                    barcode_node_mappings[t.first].push_back(b);
+                    barcode_node_mappings[t.first].insert(b);
                 }
-                for (auto k: sg.tags[b]) {
-                    std::cout << k << " "<<std::endl;
-                }
-                std::cout << std::endl;
             }
 
         }
-        if (count_bubble_nodes_with_mappings >= 1){// can't phase unless there's evidence for at least one of the  sudes
+        if (count_bubble_nodes_with_mappings >= 1){// can't phase unless there's evidence for at least one of the sides
             bubbles_final.push_back(bubble);
         }
 
     }
     std::cout << "bubbles size " << bubbles.size() << " bubbles final: " << bubbles_final.size() << std::endl;
     if (bubbles_final.size() > 1) {
-        hs.find_possible_haplotypes(bubbles_final);
+
+        hs.find_possible_haplotypes(bubbles_final, relevant_mappings, barcode_node_mappings);
         std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
         // with tags mapping to each node, just score by summing for each haplotype
         auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
@@ -311,18 +307,34 @@ void PhaseScaffolder::intersect_phasings(){
     //  for each phasing, find intersection with other phasings, help consistency by requiring x overlaps?
     std::vector<std::set<prm10xTag_t> > phasings;
     phasings.push_back(std::get<0>(phased_components[0].barcodes_supporting_winners));
+    for (auto c:std::get<0>(phased_components[0].barcodes_supporting_winners)){
+        std::cout << c << " ";
+    }
+    std::cout << std::endl << " first next block: ";
     phasings.push_back(std::get<1>(phased_components[0].barcodes_supporting_winners));
+    for (auto c:std::get<1>(phased_components[0].barcodes_supporting_winners)){
+        std::cout << c << " ";
+    }
+    std::cout << std::endl;
     std::cout << "phasings 0 size; " << phasings[0].size() << " phasings 1 size " << phasings[1].size() << std::endl;
     int ambiguous_phasings = 0;
     std::vector<int> not_phased;
     for (int  i =1; i < phased_components.size(); i ++){
         auto c1 = std::get<0>(phased_components[i].barcodes_supporting_winners);
         auto c2 = std::get<1>(phased_components[i].barcodes_supporting_winners);
-        std::vector<unsigned long> best_phasing1 = {-1, -1};
+        std::vector<unsigned long> best_phasing1 = {-1, -1};// index in list of phased blocks, size of intersection
         std::vector<unsigned long > best_phasing2 = {-1, -1};
         std::cout << "barcides supporting hap 1 of comp " << i << " " << c1.size() << std::endl;
+        for (auto c:c1){
+            std::cout << c << " ";
+        }
+        std::cout << std::endl;
         std::cout << "barcides supporting hap 2 of comp " << i << " " << c2.size() << std::endl;
 
+        for (auto c:c2){
+            std::cout << c << " ";
+        }
+        std::cout << std::endl;
         for (int j =0 ; j < phasings.size(); j++){
             auto phasing = phasings[j];
             std::vector<prm10xTag_t > int1;
@@ -338,7 +350,9 @@ void PhaseScaffolder::intersect_phasings(){
             }
 
         }
-        if (best_phasing1[0] != best_phasing2[0]) {
+        if (best_phasing1[0] == -1 && best_phasing1[1] == -1 ){
+            phasings.push_back(c1);
+        } else if (best_phasing1[0] != best_phasing2[0]) {
             if (best_phasing1[1] >= min_intersections) {
 
                 for (auto c:c1) {
@@ -356,6 +370,8 @@ void PhaseScaffolder::intersect_phasings(){
             } else {
                 phasings.push_back(c2);
             }
+        } else if (best_phasing2[0] == -1 && best_phasing2[1] == -1 ){
+            phasings.push_back(c2);
         } else {
             not_phased.push_back(i);
         }
