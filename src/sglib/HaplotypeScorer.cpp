@@ -104,6 +104,7 @@ std::vector<std::vector<sgNodeID_t >> HaplotypeScorer::find_supported_nodes(std:
  * */
 
 std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<size_t , std::map< prm10xTag_t, int>> barcode_haplotype_shared){
+    // only phaseable bubbles used to make haplotypes, but as some nodes with 0 support allowed, different haplotypes
     // arbitrary rule about how many nodes we should map to tto consider haplotype
     int min_nodes_supported_per_halotype = 2;
     std::cout<< " updating haplotypes to include only supported nodes"<<std::endl;
@@ -118,30 +119,39 @@ std::vector<int > HaplotypeScorer::remove_nodes_with_no_barcode_support(std::map
             if (!node_tag_mappings[n].empty()){
                 // if node is supported by barcodes which also support other nodes in that haplotype
                 // no idea how well it should be!!
+                std::cout<< n << " supported: " ;
                 for (auto barcode_count: node_tag_mappings[n]) {
                     auto barcode = barcode_count.first;
-
                     if (barcode_haplotype_shared[i][barcode] > barcode_haplotype_shared[pair][barcode] * 2) {
                         // can't differentiate between haplotypes with the same supported nodes, but different unsupported nodes so treat as the same
                         supported_nodes.insert(n);
+                        std::cout << n << " ";
                         // if a barcode maps to this abd other nodes in this haplotype
                         // then this node is supported by a barcode for rthis haplotype
                         break;
                     }
                 }
+                std::cout << std::endl;
             }
         }
         auto pre = haplotype_ids_to_ignore.size();
-        haplotype_ids_to_ignore.insert(supported_nodes);
-        auto post = haplotype_ids_to_ignore.size();
-        if (pre == post || supported_nodes.size() < min_nodes_supported_per_halotype){
+        if (!supported_nodes.empty()) {
+            haplotype_ids_to_ignore.insert(supported_nodes);
+            auto post = haplotype_ids_to_ignore.size();
+                std::cout << "to ignore \n";
+                for (auto n:supported_nodes) {
+                    std::cout << n << " ";
+                }
+                std::cout << std::endl;
+                if (pre == post || supported_nodes.size() < min_nodes_supported_per_halotype) {
 
 
-            to_ignore.push_back(i);
+                    to_ignore.push_back(i);
+
+                }
 
         }
     }
-
     // removing unsupported nodes should collapse combinations which don't have read mappinhgs for each node
     // this shouls stop haplotypes from drawing
     // pair numbering won't work if collapsed so just list ones to ignore
@@ -205,15 +215,19 @@ this->node_tag_mappings =node_tag_mappings;
     }
 
 
-    auto to_ignore = remove_nodes_with_no_barcode_support(node_tag_mappings, barcode_haplotype_shared);
+    //auto to_ignore = remove_nodes_with_no_barcode_support(node_tag_mappings, barcode_haplotype_shared);
     // updating haplotypes changes pair indexing!!! aso don't, make list of haplotypes to skip
     haplotype_barcodes_total_mappings.resize(haplotype_ids.size());
     haplotype_barcodes_supporting.resize(haplotype_ids.size());
-    std::cout << "ignoring: " << to_ignore.size() << std::endl;
+    /*std::cout << "ignoring: " << to_ignore.size() << std::endl;
+    for (auto ig:to_ignore){
+        std::cout << ig << " ";
+    }
+    std::cout<<std::endl;*/
     // previously found all nodes that a barcode maps to and only considered ones which mapped to enough of the haploype
     // for each haplotype, loop over each node and sum support
     for (int i = 0; i < haplotype_ids.size() ; i++){
-        if (std::find(to_ignore.begin(), to_ignore.end(), i) == to_ignore.end()) {
+        //if (std::find(to_ignore.begin(), to_ignore.end(), i) == to_ignore.end()) {
             int pair = haplotype_ids.size() - i - 1;
             // to be same as previous, need to check each barcode counted maps to enough nodes in haplotype
             for (auto node: haplotype_ids[i]) {
@@ -241,13 +255,13 @@ this->node_tag_mappings =node_tag_mappings;
                     }
                 }
             }
-        }
+        //}
     }
 for (int i=0; i < haplotype_barcodes_supporting.size() ; i++){
     if (haplotype_barcodes_supporting[i] > 0 || haplotype_barcodes_total_mappings[i] > 0) {
-        auto ignored = std::find(to_ignore.begin(), to_ignore.end(), i) == to_ignore.end();
+        //auto ignored = std::find(to_ignore.begin(), to_ignore.end(), i) == to_ignore.end();
         std::cout << "i: " << i << " votes " << haplotype_barcodes_supporting[i] << " kmers "
-                  << haplotype_barcodes_total_mappings[i] << " ignored: " << ignored << std::endl;
+                  << haplotype_barcodes_total_mappings[i] << std::endl;
         int sum = 0;
         for (auto node: haplotype_ids[i]) {
             sum += node_tag_mappings[node].size();
@@ -525,6 +539,7 @@ double stdev(std::vector<int> v, double mean){
 
 
 void HaplotypeScorer::find_possible_haplotypes(std::vector<std::vector<sgNodeID_t >> bubbles, std::map<sgNodeID_t, std::map<prm10xTag_t, int > > node_tag_mappings, std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings){
+    // only use bubbles which meet miinimum requirements to be phaseable- nodes mapped to tag which is mapped to at least 1 other node
     auto bubbles_supported = find_supported_nodes(bubbles, node_tag_mappings, barcode_node_mappings);
     //auto bubbles_supported = bubbles;
     this->bubbles = bubbles_supported;
