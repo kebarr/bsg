@@ -14,6 +14,9 @@
  *
  */
 
+HaplotypeScorer::HaplotypeScorer(std::vector<sgNodeID_t> component) : component(component){};
+
+
 void print_vector(std::vector<std::string> vec){
     int count = 0;
     for (auto a: vec){
@@ -169,11 +172,12 @@ int HaplotypeScorer::decide_barcode_haplotype_support(std::map<sgNodeID_t, std::
                             haplotype_barcodes_supporting[i] += 1;
                             for (auto node: haplotype_ids[i]) {
                                 // for each node i hap, add mappings from reads with this barcode
-                                if (node_tag_mappings[node][barcode] > 1) {// if more than 1 barcode maps tp this node
-                                    haplotype_barcodes_total_mappings[i] += node_tag_mappings[node][barcode];
-                                    // number of kmers mapped to that haploty[e from reads with that barcode
-                                    total_mappings += node_tag_mappings[node][barcode];
-                                }
+                                //if (node_tag_mappings[node][barcode] > ) {// if more than 1 barcode maps tp this node
+                                    haplotype_barcodes_total_mappings[i] += 1;// node_tag_mappings[node][barcode];
+                                    // number of kmers mapped to that node[e from reads with that barcode
+                                    total_mappings += 1;//node_tag_mappings[node][barcode];
+                                //std::cout << "node_tag_mappings[node][barcode];" << node << " " << barcode << " " << node_tag_mappings[node][barcode]<< "\n";
+                                //}
                             }
                                 std::cout << " nnnnnnnnnnnnnnnn \n";
                                 std::cout << "barcode contributing: " << barcode << " " << barcode_node_mappings[barcode].size() << " to hap " << i << std::endl;
@@ -246,7 +250,7 @@ void HaplotypeScorer::print_voting_stats(std::vector<int> vote_totals){
     }
 }
 
-void HaplotypeScorer::decide_results(std::vector<std::string> oldnames, std::pair< sgNodeID_t, sgNodeID_t >  barcode_support_winners, std::pair< sgNodeID_t, sgNodeID_t >kmer_support_winners){
+int HaplotypeScorer::decide_results(std::vector<std::string> oldnames, std::pair< sgNodeID_t, sgNodeID_t >  barcode_support_winners, std::pair< sgNodeID_t, sgNodeID_t >kmer_support_winners){
 
     auto winner = std::get<0>(barcode_support_winners);
     auto winner_pair = std::get<1>(barcode_support_winners);
@@ -362,11 +366,18 @@ void HaplotypeScorer::decide_results(std::vector<std::string> oldnames, std::pai
                                                            winner_pair);
              auto kmer_support_winners = std::make_pair(winner_mappings,
                                                         winner_mappings_pair);
-             decide_results(oldnames, barcode_support_winners, kmer_support_winners);
+             return decide_results(oldnames, barcode_support_winners, kmer_support_winners);
 
          } else {
+
              auto winners_supporting = select_nodes_from_draw(ordered_haplotype_barcodes_supporting);
+             if (std::get<0>(winners_supporting)[0] == 0){
+                 return 0;
+             }
              auto winners_total_supporting = select_nodes_from_draw(ordered_haplotype_barcodes_total_mappings);
+             if (std::get<0>(winners_total_supporting)[0] == 0){
+                 return 0;
+             }
              size_t match_len = 0;
              size_t  par_match_len =0;
              int limit = std::get<0>(winners_supporting).size() >= std::get<0>(winners_total_supporting).size() ? std::get<0>(winners_supporting).size(): std::get<0>(winners_total_supporting).size();
@@ -415,6 +426,9 @@ void HaplotypeScorer::decide_results(std::vector<std::string> oldnames, std::pai
 
 
 std::pair < std::vector<sgNodeID_t >, std::vector<sgNodeID_t > > HaplotypeScorer::select_nodes_from_draw(std::vector<size_t > order_winners){
+   // can potentially get soomething if draw...
+    // if 2 nodes fro same bubble, can't
+
     std::cout << order_winners[0] << " won with score " << haplotype_barcodes_supporting[order_winners[0]] << " " << order_winners[1] << " runner up with score " << haplotype_barcodes_supporting[order_winners[1]] << std::endl;
 for (auto h: haplotype_ids[order_winners[0]]){
     std::cout << h << " ";
@@ -423,12 +437,27 @@ for (auto h: haplotype_ids[order_winners[0]]){
     //if its a draw, take all contigs in common from top equals
     int top_score = haplotype_barcodes_supporting[order_winners[0]];
     std::vector<size_t > top_phasings;
+    std::set<size_t > bubbles_seen;
     top_phasings.push_back(order_winners[0]);
     for (size_t s=1; s < order_winners.size(); s++){
         auto score = haplotype_barcodes_supporting[order_winners[s]];
         if (score==top_score){
             top_phasings.push_back(s);
-            std::cout << top_phasings.size() << " drawn top phasings"<< std::endl;
+            std::cout << "s: "<< s << " os: " <<order_winners[s] << " score: " << score << std::endl;
+            for (auto n:haplotype_ids[s]){
+                auto bubble = bubble_map[n];
+                auto size1 = bubbles_seen.size();
+                bubbles_seen.insert(bubble);
+                auto size2 = bubbles_seen.size();
+                if (size1 == size2){
+                    std::cout << "ambiguous draw \n";
+                    sgNodeID_t r = 0;
+                    std::vector<sgNodeID_t > res;
+                    res.push_back(r);
+                    return  std::make_pair(res, res);
+                }
+
+            }
         } else {
             break;
         }
@@ -438,8 +467,16 @@ for (auto h: haplotype_ids[order_winners[0]]){
     std::set<sgNodeID_t > grouped_nodes_set;
     // need to ensure that we don't take two from same bubble
     for (int p=0; p < top_phasings.size()-1; p++) {
+        for (auto node:haplotype_ids[p]){
+            std::cout << "node " << node << " m: ";
+            for (auto m: node_tag_mappings[node]) {
+                std::cout << m.first << " " << m.second << " ";
+            }
+            std::cout << std::endl;
+        }
+        // this assumes that both haps don't draw
         std::set_intersection(haplotype_ids[p].begin(), haplotype_ids[p].end(), haplotype_ids[p+1].begin(), haplotype_ids[p+1].end(),std::inserter(grouped_nodes, grouped_nodes.begin()));
-        std::cout << "intersected nodes: " << grouped_nodes.size() << " ";
+        std::cout << "p:  << " << p << "intersected nodes: " << grouped_nodes.size() << " ";
         for (auto n:grouped_nodes){
             std::cout << n << " ";
         }
@@ -452,7 +489,7 @@ for (auto h: haplotype_ids[order_winners[0]]){
         for (auto node: bubble) {
             if (node != w) {
                 pair_grouped_nodes.push_back(node);
-                std::cout << " node: " << w << " pair: " << node ;
+                //std::cout << " node: " << w << " pair: " << node ;
                 break;
             }
         }
@@ -520,8 +557,11 @@ void HaplotypeScorer::find_possible_haplotypes(std::vector<std::vector<sgNodeID_
         }
         std::cout << haplotype_ids.size() << " haplotypes  generated " << std::endl;
 
-
-        haplotype_nodes = haplotype_nodes;
+        for (auto n:component){
+            if (std::find(haplotype_nodes.begin(), haplotype_nodes.end(), n) == haplotype_nodes.end()){
+                hom_nodes.push_back(n);
+            }
+        }
         std::cout << "Haplotype nodes size: " << haplotype_nodes.size() << std::endl;
     }
 
