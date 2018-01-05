@@ -257,7 +257,6 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
         for (auto b: bubble) {
             if (sg.tags[b].size() > 0) { // bubble contig mapped to at least 1tag
                 count_bubble_nodes_with_mappings += 1;
-                relevant_mappings[b] = node_tag_mappings[b];
                 // b = node id, t.first =  barcode: t.second = count
                 for (auto t: node_tag_mappings[b]) {
                     barcode_node_mappings_initial[t.first].insert(b);
@@ -273,14 +272,18 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     std::cout << "found " << barcode_node_mappings_initial.size() << " barcodes \n";
     std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings;
 
+
     for (auto b:barcode_node_mappings_initial){
         if (b.second.size() > 1){
             barcode_node_mappings[b.first] = b.second;
+            for (auto c:b.second) {
+                relevant_mappings[c] = node_tag_mappings[c];
+            } /*
             std::cout << b.first << " ";
             for (auto a:b.second){
                 std::cout << a << " ";
             }
-            std::cout << std::endl;
+            std::cout << std::endl;*/
         }
     }
     std::cout << "after removing mappings to single node  " << barcode_node_mappings.size() << " barcodes \n";

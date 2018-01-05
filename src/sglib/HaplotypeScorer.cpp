@@ -70,6 +70,7 @@ std::vector<std::vector<sgNodeID_t >> HaplotypeScorer::find_supported_nodes(std:
         int phaseable_for_bubble = 0;
         for (auto node: bubble) {
             std::cout << node << ": ";
+            // thias  should always contain at least 2 mappnig
             auto tags_mapped_to = node_tag_mappings[node];
             bool confirmed_phaseable = false;
             for (auto t:tags_mapped_to) {
