@@ -31,6 +31,8 @@ public:
     std::pair<std::map<prm10xTag_t, int > , std::map<prm10xTag_t, int > > supporting_barcodes;
     std::pair<std::set<prm10xTag_t>, std::set<prm10xTag_t>  > barcodes_supporting_winners;
 
+    // each possible hsplotype
+    std::vector<std::vector<sgNodeID_t> > haplotype_ids;
 
 private:
     std::map<sgNodeID_t , size_t > bubble_map;
@@ -42,8 +44,7 @@ private:
     std::map<size_t , std::vector< prm10xTag_t> > barcodes_supporting_haplotype;
     // each het node
     std::set<sgNodeID_t > haplotype_nodes;
-    // each possible hsplotype
-    std::vector<std::vector<sgNodeID_t> > haplotype_ids;
+    void decide_results(std::vector<std::string>, std::pair< sgNodeID_t, sgNodeID_t > , std::pair< sgNodeID_t, sgNodeID_t >);
 
     void print_voting_stats(std::vector<int> vote_totals);
     std::vector <prm10xTag_t> unused_barcodes;

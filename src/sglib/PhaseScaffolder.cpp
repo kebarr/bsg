@@ -249,7 +249,7 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
 int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, int min_barcodes_mapping=10){
     HaplotypeScorer hs;
     std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
-    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings;
+    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings_initial;
     std::vector<std::vector<sgNodeID_t >> bubbles_final;
     for (auto bubble:bubbles){
         int count_bubble_nodes_with_mappings= 0;
@@ -258,39 +258,59 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
             if (sg.tags[b].size() > 0) { // bubble contig mapped to at least 1tag
                 count_bubble_nodes_with_mappings += 1;
                 relevant_mappings[b] = node_tag_mappings[b];
+                // b = node id, t.first =  barcode: t.second = count
                 for (auto t: node_tag_mappings[b]) {
-                    barcode_node_mappings[t.first].insert(b);
+                    barcode_node_mappings_initial[t.first].insert(b);
                 }
             }
 
         }
-        if (count_bubble_nodes_with_mappings >= 1){// can't phase unless there's evidence for at least one of the sides
+        if (count_bubble_nodes_with_mappings >= bubble.size() - 1){// can't phase unless there's evidence for at least one of the sides
             bubbles_final.push_back(bubble);
         }
 
     }
+    std::cout << "found " << barcode_node_mappings_initial.size() << " barcodes \n";
+    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings;
+
+    for (auto b:barcode_node_mappings_initial){
+        if (b.second.size() > 1){
+            barcode_node_mappings[b.first] = b.second;
+            std::cout << b.first << " ";
+            for (auto a:b.second){
+                std::cout << a << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+    std::cout << "after removing mappings to single node  " << barcode_node_mappings.size() << " barcodes \n";
+
     std::cout << "bubbles size " << bubbles.size() << " bubbles final: " << bubbles_final.size() << std::endl;
     if (bubbles_final.size() > 1) {
 
         hs.find_possible_haplotypes(bubbles_final, relevant_mappings, barcode_node_mappings);
         std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
-        // with tags mapping to each node, just score by summing for each haplotype
-        auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
-        if (barcodes_map > min_barcodes_mapping) {
-            int res = hs.score_haplotypes(sg.oldnames);
+        if (hs.haplotype_ids.size() > 1) {
+            // with tags mapping to each node, just score by summing for each haplotype
+            auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
+            if (barcodes_map > min_barcodes_mapping) {
+                int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
-            if (res == 1) {
-                std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-                std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+                if (res == 1) {
+                    std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+                    std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
 
-                this->phased_components.push_back(hs);
-            } else if (res == 2) {
-                std::cout << "success:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-                std::cout << "success:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+                    this->phased_components.push_back(hs);
+                } else if (res == 2) {
+                    std::cout << "success:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
+                    std::cout << "success:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
 
-                this->partial_phased_components.push_back(hs);
+                    this->partial_phased_components.push_back(hs);
+                }
+                return res;
+            } else {
+                return 0;
             }
-            return res;
         } else {
             return 0;
         }
@@ -348,6 +368,24 @@ void PhaseScaffolder::intersect_phasings(){
             if (int2.size() > best_phasing2[1]){
                 best_phasing2 = {j, int2.size()};
             }
+            int shared1 = 0;
+            int shared2 = 0;
+
+            for (auto b:phasing){
+                for (auto c:c1){
+                    if (c== b){
+                        shared1 += 1;
+                    }
+                }
+                for (auto c:c2){
+                    if (c== b){
+                        shared2 += 1;
+                    }
+                }
+
+            }
+            std::cout << "j: " << j << " i: " << i << " " << shared1 << " " << shared2 << std::endl;
+
 
         }
         if (best_phasing1[0] == -1 && best_phasing1[1] == -1 ){
