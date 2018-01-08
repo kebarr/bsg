@@ -93,7 +93,6 @@ public:
     std::vector<std::string> oldnames;
     std::string filename,fasta_filename;
     // for each node, just store which barcodes map to which node
-    std::vector< std::vector<prm10xTag_t> > tags;
 };
 
 

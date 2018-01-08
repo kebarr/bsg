@@ -168,7 +168,7 @@ add_executable(gfa-pairscaff
         src/gfa-pairscaff.cc)
 
 add_executable(phaser
-               src/phaser.cpp)
+               src/phaser.cpp src/sglib/ComponentPhaser.cpp src/sglib/ComponentPhaser.h)
 
 add_executable(gfa-align
                src/gfa-align.cc)

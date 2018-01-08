@@ -112,9 +112,8 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
 #pragma omp critical(add_mapped)
                 reads_in_node[mapping.node].push_back(mapping);
                 //tags_in_node[mapping.node].push_back()
-
-                // this should be on mapper, not graph
-                sg.tags[mapping.node].push_back(read_to_tag[mapping.read_id]);
+#pragma omp critical(add_node_to_tag)
+                tags_to_nodes[read_to_tag[mapping.read_id]].push_back(mapping.node);
                 ++mapped_count;
             }
             auto tc = ++total_count;

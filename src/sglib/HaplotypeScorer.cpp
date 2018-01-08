@@ -463,10 +463,11 @@ for (auto h: haplotype_ids[order_winners[0]]){
         }
     }
     std::cout << top_phasings.size() << " drawn top phasings"<< std::endl;
-    std::vector<sgNodeID_t > grouped_nodes;
+    std::vector<sgNodeID_t > grouped_nodes = haplotype_ids[0];
     std::set<sgNodeID_t > grouped_nodes_set;
     // need to ensure that we don't take two from same bubble
-    for (int p=0; p < top_phasings.size()-1; p++) {
+    for (int p=1; p < top_phasings.size(); p++) {
+        std::vector<sgNodeID_t > grouped_nodes_new;
         for (auto node:haplotype_ids[p]){
             std::cout << "node " << node << " m: ";
             for (auto m: node_tag_mappings[node]) {
@@ -475,12 +476,13 @@ for (auto h: haplotype_ids[order_winners[0]]){
             std::cout << std::endl;
         }
         // this assumes that both haps don't draw
-        std::set_intersection(haplotype_ids[p].begin(), haplotype_ids[p].end(), haplotype_ids[p+1].begin(), haplotype_ids[p+1].end(),std::inserter(grouped_nodes, grouped_nodes.begin()));
+        std::set_intersection(haplotype_ids[p].begin(), haplotype_ids[p].end(), grouped_nodes.begin(), grouped_nodes.end(),std::inserter(grouped_nodes_new, grouped_nodes_new.begin()));
         std::cout << "p:  << " << p << "intersected nodes: " << grouped_nodes.size() << " ";
         for (auto n:grouped_nodes){
             std::cout << n << " ";
         }
         std::cout << std::endl;
+        grouped_nodes = grouped_nodes_new;
     }
     //TODO:don't assume diploid!!
     std::vector<sgNodeID_t > pair_grouped_nodes;
