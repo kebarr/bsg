@@ -58,9 +58,10 @@ public:
     void load_bubbles();
     void score_haplotypes();
     void find_possible_haplotypes();
+    std::map<size_t , std::set<prm10xTag_t >> tags_supporting_haplotypes;
 
 private:
-    std::map<sgNodeID_t , size_t > bubble_map;
+    std::map<sgNodeID_t , std::vector<size_t > >bubble_map;
     // determine if bubble has enough mappings to be phaseable
     bool bubble_is_supported(std::vector<sgNodeID_t > );
     bool node_is_supported(sgNodeID_t);
@@ -71,7 +72,7 @@ private:
 
     MappingParams mapping_params;
     void load_barcode_mappings();
-    std::map<sgNodeID_t , std::map<prm10xTag_t, int>> barcode_haplotype_mappings;
+     std::map<prm10xTag_t,std::map<sgNodeID_t , int>> barcode_node_mappings;
     //std::map<prm10xTag_t, bool> phasing_barcodes;
     std::map<sgNodeID_t , int> node_bubble_dict;
     std::vector<HaplotypeScore> haplotype_scores;

@@ -24,6 +24,7 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
             node_bubble_dict[node] = i;
         }
     }
+    find_possible_haplotypes();
     std::cout << "mapping data sufficient to phase, in principal, " << phaseable_bubbles.size() << "  bubbles from " << bubbles.size() << " bubbles in total \n";
     load_barcode_mappings();
 
@@ -50,7 +51,10 @@ void ComponentPhaser::load_barcode_mappings(){
                     if (std::find(supported_nodes.begin(), supported_nodes.end(), mapping.node) !=
                         supported_nodes.end()) {
                         prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
-                        barcode_haplotype_mappings[bubble_map[node]][tag] += mapping.unique_matches;
+                        barcode_node_mappings[tag][node] += mapping.unique_matches;
+                        for (auto h: bubble_map[node]) {
+                            tags_supporting_haplotypes[h].insert(tag);
+                        }
                         barcodes_mapped_to.insert(tag);
                     }
                 }
@@ -76,20 +80,13 @@ void ComponentPhaser::load_barcode_mappings(){
 size_t ComponentPhaser::haplotype_selected_by_barcode(prm10xTag_t barcode){
     // barcode selects a haplotype if it has most mppngs to that haplotype
     int max=0;
+    auto nodes_mapped_to = mapper.tags_to_nodes[barcode];
     std::vector<int> winners;
-    for (auto h:barcode_haplotype_mappings[barcode]){
-        if (h.second > max){
-            max = h.second;
-        }
-    }
-    //TODO: DECIDE CRITERIA FOR MINIMUM SUPPORT
+    for (auto node: nodes_mapped_to){
+        if (bubble_map.find(node) != bubble_map.end()){
 
-    for (auto h:barcode_haplotype_mappings[barcode]){
-        if (h.second == max){
-            winners.push_back(h.first);
         }
     }
-    return winners;
 };
 
 void ComponentPhaser::score_haplotypes(){
@@ -104,17 +101,24 @@ void ComponentPhaser::score_haplotypes(){
         //int pair_support = 0;
         //int pair_kmer_support = 0;
         HaplotypeScore hs;
-        hs.barcode_support += barcode_haplotype_mappings[index].size();
-        hs.pair_support += barcode_haplotype_mappings[pair].size();
-        for (auto tag: barcode_haplotype_mappings[index]){
-            hs.kmer_support += tag.second;
+        hs.barcode_support += tags_supporting_haplotypes[index].size();
+        hs.pair_support += tags_supporting_haplotypes[pair].size();
+
+        for (auto tag: tags_supporting_haplotypes[index]) {
+            for (auto node: h){
+                hs.kmer_support += barcode_node_mappings[tag][node];
+
             }
-
-
-        for (auto tag: barcode_haplotype_mappings[pair]){
-            hs.pair_kmer_support += tag.second;
-
         }
+        for (auto tag: tags_supporting_haplotypes[pair]) {
+
+            for (auto node: h_pair) {
+
+                hs.pair_kmer_support += barcode_node_mappings[tag][node];
+            }
+        }
+
+
     }
 
 };
@@ -127,7 +131,7 @@ void ComponentPhaser::find_possible_haplotypes() {
         for (size_t i = 0; i < N; ++i) {
             P *= phaseable_bubbles[i].size();
             for (auto n: phaseable_bubbles[i]) {
-                bubble_map[n] = i;
+                bubble_map[n].push_back(i);
             }
         }
         std::vector<std::vector<sgNodeID_t >> haps;
