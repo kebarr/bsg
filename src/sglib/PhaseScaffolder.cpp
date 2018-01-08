@@ -266,10 +266,10 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
         int count_bubble_nodes_with_mappings= 0;
 
         for (auto b: bubble) {
-            if (sg.tags[b].size() > 0) { // bubble contig mapped to at least 1tag
+            //if (sg.tags[b].size() > 0) { // bubble contig mapped to at least 1tag
                 count_bubble_nodes_with_mappings += 1;
 
-            }
+            //}
 
         }
         if (count_bubble_nodes_with_mappings >= bubble.size() - 1){// can't phase unless there's evidence for at least one of the sides
