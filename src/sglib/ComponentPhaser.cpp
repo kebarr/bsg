@@ -4,7 +4,7 @@
 
 #include "ComponentPhaser.h"
 
-ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, std::vector<sgNodeID_t > component, std::vector<std::vector<sgNodeID_t > >  bubbles, int min_node_mappings=1, int min_nodes_per_tag=2): sg(sg), mapper(mapper) ,component(component), min_node_mappings(min_node_mappings), min_nodes_per_tag(min_nodes_per_tag), bubbles(bubbles){
+ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, std::vector<sgNodeID_t > component, std::vector<std::vector<sgNodeID_t > >  bubbles, MappingParams mapping_params): sg(sg), mapper(mapper) ,component(component), bubbles(bubbles), mapping_params(mapping_params){
     for (int i = 0; i < bubbles.size() ; i++){
         for (auto node:bubbles[i]){
             node_bubble_dict[node] = i;
@@ -20,25 +20,37 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
     load_bubbles();
 };
 
+// want to reduce number of candidate haplotypes by only using bubbles that mappings can actually phase
+
 void ComponentPhaser::load_barcode_mappings(){
     std::map<prm10xTag_t , int> barcodes_mapped_to;
-    for (auto node:supported_nodes){
-        std::vector<ReadMapping> mappings = mapper.reads_in_node[node];
-        for (auto mapping:mappings){
-            prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
-            barcode_node_mappings[tag][node] += 1;
-        }
-    }
-
-    for (auto tag:barcode_node_mappings){
-        int nodes_mapped_to = 0;
-        for (auto node:mapper.tags_to_nodes[tag.first]) {
-            if (std::find(supported_nodes.begin(), supported_nodes.end(), node) != supported_nodes.end()) {
-                nodes_mapped_to += 1;
+    // only care about barcodes for nodes in phaseable bubbles
+    for (auto bubble:phaseable_bubbles) {
+        for (auto node:bubble) {
+            std::vector<ReadMapping> mappings = mapper.reads_in_node[node];
+            // count each barcode mapping to a node in a phaseable bubble
+            for (auto mapping:mappings) {
+                if (mapping.unique_matches > mapping_params.min_kmer_mappings) {
+                    if (std::find(supported_nodes.begin(), supported_nodes.end(), mapping.node) !=
+                        supported_nodes.end()) {
+                        prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
+                        barcode_node_mappings[tag][node] += mapping.unique_matches;
+                    }
+                }
             }
         }
-        // shouldn't need this as shoul
-        if (nodes_mapped_to > min_nodes_per_tag){
+
+    }
+    // phasing barcodes map to nodes in at least 2 bubbles
+    for (auto tag:barcode_node_mappings){
+        std::set<int > bubbles_mapped_to;
+        for (auto node:mapper.tags_to_nodes[tag.first]) {
+            if (std::find(supported_nodes.begin(), supported_nodes.end(), node) != supported_nodes.end()) {
+                bubbles_mapped_to.insert(node_bubble_dict[node]);
+            }
+        }
+
+        if (bubbles_mapped_to.size() >= 2){
             phasing_barcodes.push_back(tag.first);
         }
     }
@@ -50,27 +62,21 @@ bool ComponentPhaser::node_is_supported(sgNodeID_t node){
     std::vector<ReadMapping> mappings = mapper.reads_in_node[node];
     // determine whether individual node has sufficient mappings to resolve
     // sufficient = mappings with barcodes that map to nodes in other bubbles in this component
-    if (mappings.size() > min_node_mappings){
+    int mappings_with_enough_matches = 0;
+    if (mappings.size() > mapping_params.min_node_mappings){
         for (auto mapping:mappings) {
-            // find tag for that mapping
-            prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
-            if (mapper.tags_to_nodes[tag].size() > min_nodes_per_tag) {
-                for (auto other_node: mapper.tags_to_nodes[tag]) {
-                        // tag must be mapped to node in other  bubble of component to be useful
-                        if (std::find(component.begin(), component.end(), node) != component.end()) {
-                            int bubble = node_bubble_dict[node];
+            if (mapping.unique_matches > mapping_params.min_kmer_mappings) {
 
-                            if (bubble != node_bubble_dict[other_node]) {
+                // find tag for that mapping
+                prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
+                if (mapper.tags_to_nodes[tag].size() > mapping_params.min_nodes_per_tag) {
+                    mappings_with_enough_matches += 1;
 
-                                return true;
-                        }
-                    }
                 }
-
             }
         }
     }
-    return  false;
+    return mappings_with_enough_matches > mapping_params.min_node_mappings_with_enough_matches;
 };
 
 void ComponentPhaser::load_bubbles(){
@@ -79,6 +85,7 @@ void ComponentPhaser::load_bubbles(){
             phaseable_bubbles.push_back(bubble);
         }
     }
+
 };
 
 bool ComponentPhaser::bubble_is_supported(std::vector<sgNodeID_t > bubble){
@@ -91,6 +98,7 @@ bool ComponentPhaser::bubble_is_supported(std::vector<sgNodeID_t > bubble){
             }
         }
         if (support >= bubble.size() -1){
+
             return true;
         }
 

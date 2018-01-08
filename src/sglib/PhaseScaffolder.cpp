@@ -125,7 +125,7 @@ void PhaseScaffolder::phase_components(int max_bubbles=12, int min_barcodes_mapp
     std::vector<std::pair<size_t, size_t> > comp_sizes;
 // this finds 2 components for test graph...
     std::cout << "Found " << components.size() << " connected components " << std::endl;
-    sum_node_tag_mappings(sg.tags);
+    //sum_node_tag_mappings(sg.tags);
 
     for (auto component:components) {
 

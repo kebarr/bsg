@@ -392,7 +392,6 @@ void SequenceGraph::load_from_gfa(std::string filename) {
             ++lcount;
         }
     }
-    tags.resize(nodes.size());
     if (dist_egt0 > lcount*0.5f) {
         std::cout << "Warning: The loaded graph contains " << dist_egt0 << " non-overlapping links out of " << lcount << std::endl;
     }

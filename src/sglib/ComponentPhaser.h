@@ -15,6 +15,12 @@
 #include "sglib/SequenceGraph.hpp"
 #include <sglib/PairedReadMapper.hpp>
 
+struct MappingParams{
+    int min_node_mappings_with_enough_matches;
+    int min_node_mappings;
+    int min_nodes_per_tag;
+    int min_kmer_mappings;
+};
 /*
 Barcode::Barcode(static prm10xTag_t barcode) : barcode(barcode){};
 
@@ -28,7 +34,7 @@ public:
 
 class ComponentPhaser {
 public:
-    ComponentPhaser(SequenceGraph &, PairedReadMapper&, std::vector<sgNodeID_t >, std::vector<std::vector<sgNodeID_t > > , int , int);
+    ComponentPhaser(SequenceGraph &, PairedReadMapper&, std::vector<sgNodeID_t >, std::vector<std::vector<sgNodeID_t > > , MappingParams;
 
     std::vector<sgNodeID_t > component;
     std::vector<std::vector<sgNodeID_t > > bubbles;
@@ -48,8 +54,7 @@ private:
     SequenceGraph & sg;
     PairedReadMapper & mapper;
     std::vector<sgNodeID_t > supported_nodes;
-    int min_node_mappings;
-    int min_nodes_per_tag;
+    MappingParams mapping_params;
     void load_barcode_mappings();
     std::map<prm10xTag_t, std::map<sgNodeID_t , int>> barcode_node_mappings;
     //std::map<prm10xTag_t, bool> phasing_barcodes;
