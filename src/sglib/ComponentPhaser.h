@@ -28,15 +28,17 @@ public:
 
 class ComponentPhaser {
 public:
-    ComponentPhaser(SequenceGraph &, PairedReadMapper&, std::vector<sgNodeID_t >, int , int);
+    ComponentPhaser(SequenceGraph &, PairedReadMapper&, std::vector<sgNodeID_t >, std::vector<std::vector<sgNodeID_t > > , int , int);
 
     std::vector<sgNodeID_t > component;
+    std::vector<std::vector<sgNodeID_t > > bubbles;
+
     std::vector<std::vector<sgNodeID_t > > phaseable_bubbles;
     // barcodes which map to nodes from 2 separate bubbles
     std::vector<prm10xTag_t> phasing_barcodes;
 
     // take component and load nodes that have sufficient barcode support
-    void load_bubbles(std::vector<std::vector<sgNodeID_t >>);
+    void load_bubbles();
     void find_possible_haplotypes(std::vector<std::vector<sgNodeID_t >>, std::map<sgNodeID_t, std::map<prm10xTag_t, int > > , std::map<prm10xTag_t, std::set<sgNodeID_t > > );
 
 private:
@@ -51,6 +53,8 @@ private:
     void load_barcode_mappings();
     std::map<prm10xTag_t, std::map<sgNodeID_t , int>> barcode_node_mappings;
     //std::map<prm10xTag_t, bool> phasing_barcodes;
+    std::map<sgNodeID_t , int> node_bubble_dict;
+
 };
 
 
