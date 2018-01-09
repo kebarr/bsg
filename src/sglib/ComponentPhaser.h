@@ -24,12 +24,16 @@ struct MappingParams{
 };
 
 struct HaplotypeScore{
+    HaplotypeScore(size_t index) : index(index){};
+    HaplotypeScore(){};
     int barcode_support = 0;
     int kmer_support = 0;
     int barcodes_against_pair= 0;
     int pair_support = 0;
     int pair_kmer_support = 0;
     int barcodes_selecting = 0;
+    size_t  index;
+
 };
 
 

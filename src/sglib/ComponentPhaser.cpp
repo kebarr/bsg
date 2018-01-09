@@ -152,17 +152,45 @@ double stdev(std::vector<int> v, double mean){
     }
     return 0.0;
 }
+float calculateSD(std::vector<int> data)
+{
+    int sum = 0;
+    float mean, standardDeviation = 0.0;
+
+    int i;
+
+    for(i = 0; i < data.size(); ++i)
+    {
+        sum += data[i];
+        std::cout << sum << " i: " << data[i]<<", ";
+    }
+    std::cout << std::endl;
+
+    mean = sum/data.size();
+
+    for(i = 0; i < data.size(); ++i){
+        standardDeviation += pow(data[i] - mean, 2);
+    std::cout << standardDeviation << " i: " << data[i]<<", " << pow(data[i] - mean, 2) <<", " ;}
+    std::cout << std::endl << standardDeviation  << std::endl ;
+
+    return sqrt(standardDeviation / data.size());
+}
+
 
 void ComponentPhaser::print_voting_stats(std::vector<int> vote_totals){
 
 if (!vote_totals.empty()) {
     print_vector(vote_totals);
-    auto mean = std::accumulate(vote_totals.begin(), vote_totals.end(), 0LL) / vote_totals.size();
+    int mean = std::accumulate(vote_totals.begin(), vote_totals.end(), 0LL) / vote_totals.size();
 
+    std::cout << " mean" << mean << std::endl;
+    std::cout << calculateSD(vote_totals) << std::endl;;
     double res = 0;
     for (auto i: vote_totals) {
+        std::cout << res << " i: " << i <<", " << std::pow(i - mean, 2)  <<", "  << i - mean <<", " << mean <<", ";
         res += std::pow(i - mean, 2);
     }
+    std::cout << std::endl << res << std::endl ;
     auto stdev = std::pow(res / vote_totals.size(), 0.5);
     auto support_max = std::max_element(vote_totals.begin(), vote_totals.end());
     auto support_min = std::min_element(vote_totals.begin(), vote_totals.end());
@@ -179,6 +207,8 @@ size_t ComponentPhaser::phase(){
 
     std::vector<int> barcode_selecting_votes(possible_haplotypes.size());
     std::vector<int> pair_overall_votes(possible_haplotypes.size());
+    // would be less repetition if used a function for these, but would then iterate over scores 5 times
+    // could avoid rhis iterattion by collating these vores above
     for (int i=0; i < scores.size(); i++){
         auto score = scores[i];
         barcode_votes[i] += score.barcodes_selecting;
@@ -200,21 +230,31 @@ size_t ComponentPhaser::phase(){
     print_voting_stats(pair_votes);
     std::cout << "pair kmer votex \n";
     print_voting_stats(pair_overall_votes);
+    int votes_agreeing = 0;
     // still haven't decded which scores are best....
     if (barcode_votes_ordered[0] == overall_votes_ordered[0]) {
+        votes_agreeing += 1;
+    }
 
         if (barcode_votes_ordered[0] == barcodes_selecting_ordered[0]) {
-            if (barcode_votes_ordered[0] == pair_overall_votes_ordered[0]) {
-                if (barcode_votes_ordered[0] == pair_votes_ordered[0]) {
-                    winning_pair = std::make_pair(barcode_votes_ordered[0],
-                                                  possible_haplotypes.size() - 1 - barcode_votes_ordered[0]);
-                    std::cout << "all scores agree" << std::endl;
-                    print_haplotype(possible_haplotypes[barcode_votes_ordered[0]]);
-                    return barcode_votes_ordered[0];
-                }
-            }
+            votes_agreeing += 1;
         }
+    if (barcode_votes_ordered[0] == pair_overall_votes_ordered[0]) {
+        votes_agreeing += 1;
     }
+    if (barcode_votes_ordered[0] == pair_votes_ordered[0]) {
+        votes_agreeing += 1;
+    }
+    if (votes_agreeing >= 3) {
+        winning_pair = std::make_pair(barcode_votes_ordered[0],
+                                      possible_haplotypes.size() - 1 - barcode_votes_ordered[0]);
+        std::cout << votes_agreeing << " scores agree" << std::endl;
+        print_haplotype(possible_haplotypes[barcode_votes_ordered[0]]);
+        return barcode_votes_ordered[0];
+
+    }
+
+
 };
 
 HaplotypeScore  ComponentPhaser::score_haplotype(size_t index) {
@@ -222,7 +262,7 @@ HaplotypeScore  ComponentPhaser::score_haplotype(size_t index) {
     auto pair = possible_haplotypes.size() - index - 1;
 
     auto h_pair = possible_haplotypes[pair];
-    HaplotypeScore hs;
+    HaplotypeScore hs(index);
     hs.barcode_support += tags_supporting_haplotypes[index].size();
     hs.pair_support += tags_supporting_haplotypes[index].size();
 
