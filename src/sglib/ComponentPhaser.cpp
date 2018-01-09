@@ -53,6 +53,7 @@ void ComponentPhaser::load_barcode_mappings(){
                         prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
                         barcode_node_mappings[tag][node] += mapping.unique_matches;
                         for (auto h: bubble_map[node]) {
+                            std::cout << "tag: " << tag << " h: " << h << " node " << node << std::endl;
                             tags_supporting_haplotypes[h].insert(tag);
                         }
                         barcodes_mapped_to.insert(tag);
@@ -127,9 +128,14 @@ void print_vector(std::vector<int> vec){
 }
 
 
-void print_haplotype(std::vector<sgNodeID_t > vec){
+void ComponentPhaser::print_haplotype(std::vector<sgNodeID_t > vec){
     for (auto v:vec){
         std::cout << v << " ";
+    }
+    std::cout << std::endl;
+
+    for (auto v:vec){
+        std::cout << sg.oldnames[v] << " ";
     }
     std::cout << std::endl;
 }
@@ -152,29 +158,6 @@ double stdev(std::vector<int> v, double mean){
     }
     return 0.0;
 }
-float calculateSD(std::vector<int> data)
-{
-    int sum = 0;
-    float mean, standardDeviation = 0.0;
-
-    int i;
-
-    for(i = 0; i < data.size(); ++i)
-    {
-        sum += data[i];
-        std::cout << sum << " i: " << data[i]<<", ";
-    }
-    std::cout << std::endl;
-
-    mean = sum/data.size();
-
-    for(i = 0; i < data.size(); ++i){
-        standardDeviation += pow(data[i] - mean, 2);
-    std::cout << standardDeviation << " i: " << data[i]<<", " << pow(data[i] - mean, 2) <<", " ;}
-    std::cout << std::endl << standardDeviation  << std::endl ;
-
-    return sqrt(standardDeviation / data.size());
-}
 
 
 void ComponentPhaser::print_voting_stats(std::vector<int> vote_totals){
@@ -183,14 +166,10 @@ if (!vote_totals.empty()) {
     print_vector(vote_totals);
     int mean = std::accumulate(vote_totals.begin(), vote_totals.end(), 0LL) / vote_totals.size();
 
-    std::cout << " mean" << mean << std::endl;
-    std::cout << calculateSD(vote_totals) << std::endl;;
     double res = 0;
     for (auto i: vote_totals) {
-        std::cout << res << " i: " << i <<", " << std::pow(i - mean, 2)  <<", "  << i - mean <<", " << mean <<", ";
         res += std::pow(i - mean, 2);
     }
-    std::cout << std::endl << res << std::endl ;
     auto stdev = std::pow(res / vote_totals.size(), 0.5);
     auto support_max = std::max_element(vote_totals.begin(), vote_totals.end());
     auto support_min = std::min_element(vote_totals.begin(), vote_totals.end());
@@ -209,6 +188,7 @@ size_t ComponentPhaser::phase(){
     std::vector<int> pair_overall_votes(possible_haplotypes.size());
     // would be less repetition if used a function for these, but would then iterate over scores 5 times
     // could avoid rhis iterattion by collating these vores above
+    // as paired just su, first half to make sure don;t get flippped tie
     for (int i=0; i < scores.size(); i++){
         auto score = scores[i];
         barcode_votes[i] += score.barcodes_selecting;
@@ -230,6 +210,8 @@ size_t ComponentPhaser::phase(){
     print_voting_stats(pair_votes);
     std::cout << "pair kmer votex \n";
     print_voting_stats(pair_overall_votes);
+    std::cout << "barcodes selecting votes \n";
+    print_voting_stats(barcode_selecting_votes);
     int votes_agreeing = 0;
     // still haven't decded which scores are best....
     if (barcode_votes_ordered[0] == overall_votes_ordered[0]) {
@@ -250,7 +232,7 @@ size_t ComponentPhaser::phase(){
                                       possible_haplotypes.size() - 1 - barcode_votes_ordered[0]);
         std::cout << votes_agreeing << " scores agree" << std::endl;
         print_haplotype(possible_haplotypes[barcode_votes_ordered[0]]);
-        return barcode_votes_ordered[0];
+        return 1;
 
     }
 
@@ -260,6 +242,7 @@ size_t ComponentPhaser::phase(){
 HaplotypeScore  ComponentPhaser::score_haplotype(size_t index) {
     auto h = possible_haplotypes[index];
     auto pair = possible_haplotypes.size() - index - 1;
+    std::cout << "index: "<< index << " pair: " << pair << std::endl;
 
     auto h_pair = possible_haplotypes[pair];
     HaplotypeScore hs(index);
@@ -271,6 +254,7 @@ HaplotypeScore  ComponentPhaser::score_haplotype(size_t index) {
     for (auto tag: tags_supporting_haplotypes[index]) {
         for (auto node: h){
             hs.kmer_support += barcode_node_mappings[tag][node];
+            hs.pair_kmer_support += barcode_node_mappings[tag][node];
 
         }
     }
@@ -279,9 +263,9 @@ HaplotypeScore  ComponentPhaser::score_haplotype(size_t index) {
         for (auto node: h_pair) {
 
             hs.pair_kmer_support += barcode_node_mappings[tag][node];
-            hs.kmer_support += barcode_node_mappings[tag][node];
         }
-    }
++    }
+    std::cout << std::endl;
     return hs;
 }
 
@@ -314,28 +298,37 @@ void ComponentPhaser::find_possible_haplotypes() {
         auto N = phaseable_bubbles.size();
         for (size_t i = 0; i < N; ++i) {
             P *= phaseable_bubbles[i].size();
-            for (auto n: phaseable_bubbles[i]) {
-                bubble_map[n].push_back(i);
-            }
+
         }
+
         std::vector<std::vector<sgNodeID_t >> haps;
         std::cout << P << " combinations to generate from " << N << " bubbles " << std::endl;
         for (size_t m = 0; m < P; m++) {
             // this should hold the index to take from each bubble
             std::vector<size_t> indices(N);
-            std::vector<sgNodeID_t> bubble;
+            std::vector<sgNodeID_t> hap;
             size_t m_curr = m;
             for (size_t i = 0; i < N; ++i) {
                 indices[i] = m_curr % phaseable_bubbles[i].size();
-                bubble.push_back(phaseable_bubbles[i][indices[i]]);
+                hap.push_back(phaseable_bubbles[i][indices[i]]);
                 m_curr /= phaseable_bubbles[i].size();
+                bubble_map[phaseable_bubbles[i][indices[i]]].push_back(possible_haplotypes.size());
             }
 
-            possible_haplotypes.push_back(bubble);
+            possible_haplotypes.push_back(hap);
         }
         std::cout << possible_haplotypes.size() << " haplotypes  generated " << std::endl;
+        for (auto bubble: phaseable_bubbles) {
+            for (auto n: bubble){
 
-
+                std::cout << "n: " << n << " in haps: ";
+                for (auto h: bubble_map[n]) std::cout << h << " ";
+            }
+            std::cout << std::endl;
+        }
+for (auto h:possible_haplotypes){
+    print_haplotype(h);
+}
         std::cout << "Haplotype nodes size: " << possible_haplotypes.size() << std::endl;
     }
 

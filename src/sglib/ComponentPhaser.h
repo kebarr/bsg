@@ -80,6 +80,7 @@ private:
 
     size_t haplotype_selected_by_barcode(prm10xTag_t );
 
+    void print_haplotype(std::vector<sgNodeID_t > vec);
 };
 
 
