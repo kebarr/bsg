@@ -148,8 +148,8 @@ void PhaseScaffolder::phase_components(int max_bubbles=12, int min_barcodes_mapp
                     int p = phase_component(bubbles, component, min_barcodes_mapping);
                     if (p == 1) {
                         phased += 1;
-                        std::cout << std::get<0>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
-                        std::cout << std::get<1>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
+                        std::cout << std::get<0>(phased_components[phased_components.size()-1].winning_pair) << std::endl;
+                        std::cout << std::get<1>(phased_components[phased_components.size()-1].winning_pair) << std::endl;
 
                     } else if (p == 2){
                         partial_phased += 1;
@@ -166,8 +166,8 @@ void PhaseScaffolder::phase_components(int max_bubbles=12, int min_barcodes_mapp
                         if (p == 1) {
                             phased += 1;
 
-                            std::cout << std::get<0>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
-                            std::cout << std::get<1>(phased_components[phased_components.size()-1].barcodes_supporting_winners).size() << std::endl;
+                            std::cout << phased_components[phased_components.size()-1].tags_supporting_haplotypes[std::get<0>(phased_components[phased_components.size()-1].winning_pair)].size() << std::endl;
+                            std::cout << phased_components[phased_components.size()-1].tags_supporting_haplotypes[std::get<1>(phased_components[phased_components.size()-1].winning_pair)].size() << std::endl;
 
                         } else if (p == 2){
                             partial_phased += 1;
@@ -197,14 +197,14 @@ void PhaseScaffolder::print_barcode_stats(){
     double stdev = 0;
 
     for (auto c:phased_components){
-        tot += std::get<0>(c.barcodes_supporting_winners).size();
-        tot += std::get<1>(c.barcodes_supporting_winners).size();
+        tot += c.tags_supporting_haplotypes[std::get<0>(c.winning_pair)].size();
+        tot += c.tags_supporting_haplotypes[std::get<1>(c.winning_pair)].size();
 
     }
     double mean = tot/(phased_components.size()*2);
     for (auto c: phased_components) {
-        stdev += std::pow(std::get<0>(c.barcodes_supporting_winners).size() - mean, 2);
-        stdev += std::pow(std::get<1>(c.barcodes_supporting_winners).size() - mean, 2);
+        stdev += std::pow(c.tags_supporting_haplotypes[std::get<0>(c.winning_pair)].size() - mean, 2);
+        stdev += std::pow(c.tags_supporting_haplotypes[std::get<1>(c.winning_pair)].size() - mean, 2);
 
     }
     stdev = std::pow(stdev / (phased_components.size()*2), 0.5);
@@ -212,91 +212,42 @@ void PhaseScaffolder::print_barcode_stats(){
 }
 
 
-void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t> > tag_mappings, int min_tag_count=1){
-    // count how many times each barcode maps to each node
-    std::map< prm10xTag_t, std::map<sgNodeID_t, int > > node_tag_mappings_int;
-    sgNodeID_t counter = 0;
-    //tag mappings, outer index is node id, so for each node, it tells you which barcodes  map to it
-    for (auto n: tag_mappings){
-
-        for (auto tag:n) {
-            node_tag_mappings_int[tag][counter] += 1;
-
-        }
-        counter += 1;
-    }
-    for (auto n: node_tag_mappings_int){
-
-        for (auto tag:n.second) {
-            std::cout << "n: " <<n.first << " b: " <<tag.first << " s: " << node_tag_mappings_int[n.first][tag.first] << "\n";
-
-        }
-        counter += 1;
-    }
-
-    std::cout << "summed tag mappings: " << node_tag_mappings_int.size() << std::endl;
-    int discarded_barodes = 0;
-    int kept_barodes = 0;
-    for (auto b:node_tag_mappings_int){
-        //if (b.second.size() >= 2) {// if barcode maps to more than 2 nodes
-            for (auto t:b.second) {//b.second tag: number of times that tag maps to that node
-
-                if (t.second > min_tag_count) {//t.secod : number of times that tag maps to that node
-                    // node id: barcode: count
-                    node_tag_mappings[t.first][b.first] = t.second;
-                    std::cout << "n: " << t.first << " b: " << b.first << " s: " << t.second << "\n";
-                    kept_barodes += 1;
-                } else {
-                    discarded_barodes += 1;
-                }
-
-            }
-        //}
-    }
-    std::cout << "filtered tag mappings: " << node_tag_mappings.size() << " discarded " << discarded_barodes << " barcodes and kept " << kept_barodes << std::endl;
-
-};
-
 int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, std::vector<sgNodeID_t > component, int min_barcodes_mapping=2){
-    ComponentPhaser cp(sg, mapper, component, bubbles, MappingParams());
+    MappingParams mp;
+    ComponentPhaser cp(sg, mapper, component, bubbles,mp);
 
 
 
-        cp.find_possible_haplotypes();
         std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
         if (cp.possible_haplotypes.size() > 1) {
             // with tags mapping to each node, just score by summing for each haplotype
-            auto barcodes_map = cp.score_haplotypes();
+            auto barcodes_map = cp.phase();
             if (barcodes_map > min_barcodes_mapping) {
-                int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
-                if (res == 1) {
-                    std::cout << "syccess:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-                    std::cout << "syccess:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+                if (barcodes_map == 1) {
+                    std::cout << "success:: " << cp.tags_supporting_haplotypes[std::get<0>(cp.winning_pair)].size() << std::endl;
+                    std::cout << "success:: " << cp.tags_supporting_haplotypes[std::get<1>(cp.winning_pair)].size() << std::endl;
 
-                    this->phased_components.push_back(hs);
-                } else if (res == 2) {
-                    std::cout << "success:: " << std::get<0>(hs.barcodes_supporting_winners).size() << std::endl;
-                    std::cout << "success:: " << std::get<1>(hs.barcodes_supporting_winners).size() << std::endl;
+                    this->phased_components.push_back(cp);
+                } else if (barcodes_map == 2) {
+                    std::cout << "syccess:: " << cp.tags_supporting_haplotypes[std::get<0>(cp.winning_pair)].size() << std::endl;
+                    std::cout << "syccess:: " << cp.tags_supporting_haplotypes[std::get<1>(cp.winning_pair)].size() << std::endl;
 
-                    this->partial_phased_components.push_back(hs);
+                    this->partial_phased_components.push_back(cp);
                 }
-                return res;
+                return barcodes_map;
             } else {
                 return 0;
             }
         } else {
             return 0;
         }
-    }else {
-        return 0;
     }
-
 
 void PhaseScaffolder::intersect_phasings(){
     std::cout << "intersecting " << phased_components.size() << " phasings" << std::endl;
     int min_intersections = 1; // arbitrary, test
-    std::vector<HaplotypeScorer> phased_components_all;
+    std::vector<ComponentPhaser> phased_components_all;
     for (auto c: phased_components){
         phased_components_all.push_back(c);
     }

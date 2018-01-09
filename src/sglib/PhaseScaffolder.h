@@ -39,8 +39,8 @@ public:
     void print_barcode_stats();
     std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings_int;
     int phase_component (std::vector<std::vector<sgNodeID_t >>, std::vector<sgNodeID_t >, int min_barcodes_mapping=2);
-    std::vector<HaplotypeScorer> phased_components;
-    std::vector<HaplotypeScorer> partial_phased_components;
+    std::vector<ComponentPhaser> phased_components;
+    std::vector<ComponentPhaser> partial_phased_components;
     std::vector<std::vector<std::vector<sgNodeID_t > > > split_component(std::vector<std::vector<sgNodeID_t >>, int max_bubbles=12);
 
 

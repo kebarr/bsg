@@ -31,16 +31,7 @@ struct HaplotypeScore{
     int pair_kmer_support = 0;
     int barcodes_selecting = 0;
 };
-/*
-Barcode::Barcode(static prm10xTag_t barcode) : barcode(barcode){};
 
-class Barcode {
-public:
-    //Barcode(static prm10xTag_t );
-    static prm10xTag_t barcode;
-    std::map<sgNodeID_t , int> mappings;
-    bool phases_component;
-};*/
 
 class ComponentPhaser {
 public:
@@ -57,13 +48,14 @@ public:
 
     // take component and load nodes that have sufficient barcode support
     void load_bubbles();
-    int phase();
+    size_t phase();
     void find_possible_haplotypes();
     std::map<size_t , std::set<prm10xTag_t >> tags_supporting_haplotypes;
+    std::pair<size_t , size_t > winning_pair;
 
 private:
     std::vector<HaplotypeScore>  score_haplotypes();
-    std::map<sgNodeID_t , std::vector<size_t > >bubble_map;
+    std::map<sgNodeID_t , std::vector<size_t > > bubble_map;
     // determine if bubble has enough mappings to be phaseable
     bool bubble_is_supported(std::vector<sgNodeID_t > );
     bool node_is_supported(sgNodeID_t);
@@ -71,8 +63,11 @@ private:
     PairedReadMapper & mapper;
     std::vector<sgNodeID_t > supported_nodes;
     std::vector<sgNodeID_t > unsupported_nodes;
+    HaplotypeScore  score_haplotype(size_t);
 
-    MappingParams mapping_params;
+    void print_voting_stats(std::vector<int>);
+
+                                             MappingParams mapping_params;
     void load_barcode_mappings();
      std::map<prm10xTag_t,std::map<sgNodeID_t , int>> barcode_node_mappings;
     //std::map<prm10xTag_t, bool> phasing_barcodes;

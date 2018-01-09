@@ -141,8 +141,8 @@ add_library(sequence_graph SHARED
             src/sglib/SequenceGraph.cc
             src/sglib/PairedReadMapper.hpp
             src/sglib/PairedReadMapper.cc
-            src/sglib/HaplotypeScorer.hpp
-            src/sglib/HaplotypeScorer.cpp
+            src/sglib/ComponentPhaser.cpp
+            src/sglib/ComponentPhaser.h
             src/sglib/SequenceGraphJournal.hpp
             src/sglib/SequenceGraphJournal.cc
             src/sglib/SequenceGraph.cc
@@ -168,7 +168,7 @@ add_executable(gfa-pairscaff
         src/gfa-pairscaff.cc)
 
 add_executable(phaser
-               src/phaser.cpp src/sglib/ComponentPhaser.cpp src/sglib/ComponentPhaser.h)
+               src/phaser.cpp)
 
 add_executable(gfa-align
                src/gfa-align.cc)
