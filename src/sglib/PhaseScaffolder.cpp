@@ -129,7 +129,7 @@ void PhaseScaffolder::phase_components(int max_bubbles=12, int min_barcodes_mapp
 
     for (auto component:components) {
 
-        auto size = component_bps(this->sg, component);
+        auto size = component_bps(sg, component);
         comp_sizes.push_back(std::make_pair(size, component.size()));
         std::cout << sg.oldnames.size() << " comp size: " << component.size() << " nodes size: " << sg.nodes.size() << std::endl;
 
@@ -258,62 +258,15 @@ void PhaseScaffolder::sum_node_tag_mappings(std::vector< std::vector<prm10xTag_t
 };
 
 int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, std::vector<sgNodeID_t > component, int min_barcodes_mapping=2){
-    HaplotypeScorer hs(component);
-    std::map<sgNodeID_t, std::map<prm10xTag_t, int > > relevant_mappings;
-    std::vector<std::vector<sgNodeID_t >> bubbles_final;
-    std::vector <sgNodeID_t> bubble_nodes;
-    for (auto bubble:bubbles){
-        int count_bubble_nodes_with_mappings= 0;
-
-        for (auto b: bubble) {
-            //if (sg.tags[b].size() > 0) { // bubble contig mapped to at least 1tag
-                count_bubble_nodes_with_mappings += 1;
-
-            //}
-
-        }
-        if (count_bubble_nodes_with_mappings >= bubble.size() - 1){// can't phase unless there's evidence for at least one of the sides
-            bubbles_final.push_back(bubble);
-            for (auto b:bubble) {
-                bubble_nodes.push_back(b);
-            }
-        }
-
-    }
-    //std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings_int;
-    // want barcodes which map to at least 2 nodes
-    for (auto node:bubble_nodes){
-        std::set<sgNodeID_t > intermediate;
-            for (auto t: node_tag_mappings[node]) {
-                barcode_node_mappings_int[t.first].insert(node);
-            }
-            relevant_mappings[node] = node_tag_mappings[node];
+    ComponentPhaser cp(sg, mapper, component, bubbles, MappingParams());
 
 
 
-    }
-    std::map<prm10xTag_t, std::set<sgNodeID_t > > barcode_node_mappings;
-    for (auto b:barcode_node_mappings_int){
-        if (b.second.size()>=2){
-            barcode_node_mappings[b.first] = b.second;
-            std::cout << b.first << " ";
-            for (auto s:b.second){
-                std::cout << s << " ";
-            }
-            std::cout << std::endl;
-        }
-    }
-
-    std::cout << "found  " << barcode_node_mappings.size() << " barcodes mapping to bubble nodes\n";
-
-    std::cout << "bubbles size " << bubbles.size() << " bubbles final: " << bubbles_final.size() << std::endl;
-    if (bubbles_final.size() > 1) {
-
-        hs.find_possible_haplotypes(bubbles_final, relevant_mappings, barcode_node_mappings);
+        cp.find_possible_haplotypes();
         std::cout << "mapper.reads_in_node.size()  " << mapper.reads_in_node.size() << std::endl;
-        if (hs.haplotype_ids.size() > 1) {
+        if (cp.possible_haplotypes.size() > 1) {
             // with tags mapping to each node, just score by summing for each haplotype
-            auto barcodes_map = hs.decide_barcode_haplotype_support(relevant_mappings, barcode_node_mappings);
+            auto barcodes_map = cp.score_haplotypes();
             if (barcodes_map > min_barcodes_mapping) {
                 int res = hs.score_haplotypes(sg.oldnames);
 // now have mappings and barcode support
@@ -338,7 +291,7 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     }else {
         return 0;
     }
-}
+
 
 void PhaseScaffolder::intersect_phasings(){
     std::cout << "intersecting " << phased_components.size() << " phasings" << std::endl;

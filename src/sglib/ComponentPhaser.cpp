@@ -79,17 +79,30 @@ void ComponentPhaser::load_barcode_mappings(){
 
 size_t ComponentPhaser::haplotype_selected_by_barcode(prm10xTag_t barcode){
     // barcode selects a haplotype if it has most mppngs to that haplotype
-    int max=0;
+    std::vector<int> nodes;
+    std::vector<int> scores;
     auto nodes_mapped_to = mapper.tags_to_nodes[barcode];
-    std::vector<int> winners;
     for (auto node: nodes_mapped_to){
         if (bubble_map.find(node) != bubble_map.end()){
-
+            for (auto h: bubble_map[node]){
+                nodes[h] += 1;
+                scores[h] += barcode_node_mappings[barcode][node];
+            }
         }
     }
+    auto highest_scored_haplotype = std::distance(scores, std::max_element(scores.begin(), scores.end());
+    auto most_voted_haplotype = std::distance(nodes, std::max_element(nodes.begin(), nodes.end());
+
 };
 
-void ComponentPhaser::score_haplotypes(){
+int ComponentPhaser::phase(){
+    auto scores = score_haplotypes();
+    
+};
+
+std::vector<HaplotypeScore>  ComponentPhaser::score_haplotypes(){
+    std::cout << "scoring haplotypes " << std::endl;
+    std::vector<HaplotypeScore> scores;
     // kmow number of phasings is aleays even
     for (int index=0; index < possible_haplotypes.size()/2; index++){
     auto h = possible_haplotypes[index];
@@ -117,10 +130,15 @@ void ComponentPhaser::score_haplotypes(){
                 hs.pair_kmer_support += barcode_node_mappings[tag][node];
             }
         }
+    scores.push_back(hs);
 
 
     }
-
+    for (auto barcode:phasing_barcodes){
+        auto winner = haplotype_selected_by_barcode(barcode);
+        scores[winner].barcodes_selecting += 1;
+    }
+    return scores;
 };
 
 void ComponentPhaser::find_possible_haplotypes() {

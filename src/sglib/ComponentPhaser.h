@@ -29,6 +29,7 @@ struct HaplotypeScore{
     int barcodes_against_pair= 0;
     int pair_support = 0;
     int pair_kmer_support = 0;
+    int barcodes_selecting = 0;
 };
 /*
 Barcode::Barcode(static prm10xTag_t barcode) : barcode(barcode){};
@@ -56,11 +57,12 @@ public:
 
     // take component and load nodes that have sufficient barcode support
     void load_bubbles();
-    void score_haplotypes();
+    int phase();
     void find_possible_haplotypes();
     std::map<size_t , std::set<prm10xTag_t >> tags_supporting_haplotypes;
 
 private:
+    std::vector<HaplotypeScore>  score_haplotypes();
     std::map<sgNodeID_t , std::vector<size_t > >bubble_map;
     // determine if bubble has enough mappings to be phaseable
     bool bubble_is_supported(std::vector<sgNodeID_t > );
