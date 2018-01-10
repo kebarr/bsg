@@ -16,7 +16,7 @@ void print_vector(std::vector<T> vec){
 ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, std::vector<sgNodeID_t > component, std::vector<std::vector<sgNodeID_t > >  bubbles, MappingParams mapping_params): sg(sg), mapper(mapper) ,component(component), bubbles(bubbles), mapping_params(mapping_params){
     for (int i=0; i < mapper.read_to_tag.size() ; i++){
         if (mapper.read_to_tag[i] == 0){
-            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+            std::cout << i << ", "<< " " << mapper.read_to_node[i] << std::endl;;
         }
 
     }
@@ -43,7 +43,7 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
     std::cout << "mapping data sufficient to phase, in principal, " << phaseable_bubbles.size() << "  bubbles from " << bubbles.size() << " bubbles in total \n";
     for (int i=0; i < mapper.read_to_tag.size() ; i++){
         if (mapper.read_to_tag[i] == 0){
-            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+            std::cout << i << ", " << " " << mapper.read_to_node[i] << std::endl;;
         }
 
     }
@@ -63,14 +63,24 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
 
 void ComponentPhaser::load_barcode_mappings(){
     std::set<prm10xTag_t> barcodes_mapped_to;
-    for (int i=0; i < mapper.read_to_tag.size() ; i++){
-        if (mapper.read_to_tag[i] == 0){
-            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+    int counter = 0;
+    for (auto i: mapper.read_to_tag){
+        /*if (i == mapper.read_to_tag[0]){
+            std::cout << i << ", " << mapper.read_names[counter] << " " << mapper.read_to_node[counter] << std::endl;;
         }
+        std::cout << counter << ": " << i << ", ";*/
+        counter +=1;
 
     }
-    if (mapper.read_to_tag[8061] == 0){std::cout << "yes \n";}
-    std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n" << mapper.read_to_tag[7841] << " " << mapper.read_to_tag[8061] << "\n";
+    std::ofstream o1("rtt3.txt");
+    o1 << "'";
+    for (auto r:mapper.read_to_tag){
+        o1 << r << "\n";
+    }
+    // output file is identical to previous!!! no tags are 0
+    o1 << "'" <<std::endl;
+    if (mapper.read_to_tag[8061] == 0){std::cout << " yes \n";}
+    std::cout << "\n&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n" << mapper.read_to_tag[7841] << " " << mapper.read_to_tag[8061] << " "<< mapper.read_to_tag.size() << " node:  " <<  mapper.read_to_node.size()<< "\n";
     // only care about barcodes for nodes in phaseable bubbles
     for (auto bubble:phaseable_bubbles) {
         print_vector(bubble);
@@ -78,6 +88,7 @@ void ComponentPhaser::load_barcode_mappings(){
         int mappings_to_bubble_used = 0;
         std::set<prm10xTag_t> barcodes_bubble_mapped_to;
         int kmer_mappings_to_bubble_used = 0;
+        int count = 0;
         for (auto node:bubble) {
 
             std::vector<ReadMapping> mappings = mapper.reads_in_node[node];
@@ -89,7 +100,15 @@ void ComponentPhaser::load_barcode_mappings(){
                 if (mapping.unique_matches > mapping_params.min_kmer_mappings) {
 
                         prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
-                        if (tag == 0) {std::cout << " id: " << mapping.read_id << " matches " << mapping.unique_matches << " tag:  " << mapper.read_to_tag[mapping.read_id] << " node:  " <<  mapper.read_to_node[mapping.read_id] << " name: "<< mapper.read_names[mapping.read_id];
+                        if (tag == 0) {std::cout << " id: " << mapping.read_id << " matches " << mapping.unique_matches << " tag:  " << mapper.read_to_tag[mapping.read_id] << " node:  " <<  mapper.read_to_node[mapping.read_id];
+                            count +=1;
+                            std::ofstream o1("rtt_seroed" + std::to_string(count) + ".txt");
+                            o1 << "'";
+                            for (auto r:mapper.read_to_tag){
+                                o1 << r << "\n";
+
+                            }
+                            o1 << "'" <<std::endl;
                         } else {
 
                             barcode_node_mappings[tag][node] += mapping.unique_matches;

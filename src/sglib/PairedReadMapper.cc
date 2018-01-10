@@ -15,7 +15,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
      */
     FastqReader<FastqRecord> fastqReader({0},filename);
     std::atomic<uint64_t> mapped_count(0),total_count(0);
-#pragma omp parallel shared(fastqReader)// this lione has out of bounds error on my weird read file AND  ‘PairedReadMapper::reads_in_node’ is not a variable in clause ‘shared’ when compiling on
+#pragma omp parallel shared(fastqReader) num_threads(1)// this lione has out of bounds error on my weird read file AND  ‘PairedReadMapper::reads_in_node’ is not a variable in clause ‘shared’ when compiling on
     {
         FastqRecord read;
         std::vector<KmerIDX> readkmers;
@@ -28,6 +28,9 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
         }
         while (c) {
             mapping.read_id = (read.id) * 2 + offset;
+            if (mapping.read_id > 10000){
+                std::cout << "here: " << std::endl;
+            }
             //this enables partial read re-mapping by setting read_to_node to 0
             if (read_to_node.size()<=mapping.read_id or 0==read_to_node[mapping.read_id]) {
                 mapping.node = 0;
@@ -67,7 +70,14 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                         {
                             //TODO: inefficient
                             if (read_to_tag.size() <= mapping.read_id) read_to_tag.resize(mapping.read_id + 100000,0);
-                            read_to_tag[(read.id)*2+offset] = tag;
+                            if (mapping.read_id%2 == 0){
+                            read_to_tag[mapping.read_id] = tag;
+                                read_to_tag[mapping.read_id + 1] = tag;
+                            } else {
+
+                                read_to_tag[mapping.read_id] = tag;
+                                read_to_tag[mapping.read_id - 1] = tag;
+                            }
                             if (read_to_tag[mapping.read_id] == 0) std::cout << read.name << " " << read.seq << std::endl;
                         }
                     } else {
@@ -108,6 +118,8 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
             }
             if (mapping.node != 0 and mapping.unique_matches >= min_matches) {
                 //TODO: set read id and add to map collection
+                std::cout << "mapped: " << read.name << " id: " << mapping.read_id << " tag: " << read_to_tag[mapping.read_id] << " to node: " << mapping.node << " tag -1: " << read_to_tag[mapping.read_id-1] << " " << read_to_tag.size() << "\n";
+                //mapped: @SN7001150:517:HHKWJBCXY:2:2216:16766:98078_TACTAGGAGAGTCTGG id: 14974 tag: 3341323130 to node: 13 tag -1: 2232226989 107488
 
                 mapping.read_id=(read.id)*2+offset;
 
@@ -118,7 +130,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                 tags_to_nodes[read_to_tag[mapping.read_id]].push_back(mapping.node);
                 ++mapped_count;
                 if (read_to_tag[mapping.read_id] == 0) std::cout << read.name << " " << read.seq << std::endl;
-                read_names[mapping.read_id] = read.name;
+
 
                 }
             auto tc = ++total_count;
@@ -136,7 +148,14 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
     for (sgNodeID_t n=1;n<reads_in_node.size();++n){
         std::sort(reads_in_node[n].begin(),reads_in_node[n].end());
     }
-
+    // here and outside outputs identical
+    std::ofstream o1("rtt2.txt");
+    o1 << "'";
+    for (auto r:read_to_tag){
+        o1 << r << "\n";
+    }
+    o1 << "'" <<std::endl;
+    std::cout << "'" <<std::endl;
     return total_count;
 }
 
@@ -220,11 +239,20 @@ void PairedReadMapper::remap_reads(){
         for (auto &rin:reads_in_node)
             for (auto &mr:rin)
                 read_to_node[mr.read_id] = mr.node;
-        read_to_tag.clear();
+        //read_to_tag.clear();
 
     } else if (readType == prm10x) {
         auto r1c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read1filename, 1, true);
+        std::cout << "rtt: " << read_to_tag.size() << std::endl;
         auto r2c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read2filename, 2, true);
+        std::ofstream o1("rtt1.txt");
+        o1 << "'";
+        for (auto r:read_to_tag){
+            o1 << r << "\n";
+        }
+        o1 << "'" <<std::endl;
+        std::cout << "rtt: " << read_to_tag.size() << " " << read_to_tag[14974] << std::endl;
+        // rtt: 7487 3341323130
         //now populate the read_to_node array
         assert(r1c == r2c);
         read_to_node.resize(r1c * 2 + 1, 0);

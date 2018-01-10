@@ -216,7 +216,7 @@ int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbl
     MappingParams mp;
     for (int i=0; i < mapper.read_to_tag.size() ; i++){
         if (mapper.read_to_tag[i] == 0){
-            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+            std::cout << i << ", " << " " << mapper.read_to_node[i] << std::endl;;
         }
 
     }

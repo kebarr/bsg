@@ -77,7 +77,6 @@ public:
     std::map<prm10xTag_t , std::vector<sgNodeID_t >> tags_to_nodes;
     std::vector<sgNodeID_t> read_to_node;//id of the main node if mapped, set to 0 to remap on next process
     std::vector<prm10xTag_t> read_to_tag;
-    std::map<uint64_t, std::string> read_names;
 };
 
 
