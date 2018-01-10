@@ -67,7 +67,8 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                         {
                             //TODO: inefficient
                             if (read_to_tag.size() <= mapping.read_id) read_to_tag.resize(mapping.read_id + 100000,0);
-                            read_to_tag[mapping.read_id] = tag;
+                            read_to_tag[(read.id)*2+offset] = tag;
+                            if (read_to_tag[mapping.read_id] == 0) std::cout << read.name << " " << read.seq << std::endl;
                         }
                     } else {
                         std::cout << "Read name too short to contain 10x barcode: " << read.name << std::endl;
@@ -117,6 +118,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                 tags_to_nodes[read_to_tag[mapping.read_id]].push_back(mapping.node);
                 ++mapped_count;
                 if (read_to_tag[mapping.read_id] == 0) std::cout << read.name << " " << read.seq << std::endl;
+                read_names[mapping.read_id] = read.name;
 
                 }
             auto tc = ++total_count;

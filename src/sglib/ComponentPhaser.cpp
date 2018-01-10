@@ -14,7 +14,13 @@ void print_vector(std::vector<T> vec){
 
 
 ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, std::vector<sgNodeID_t > component, std::vector<std::vector<sgNodeID_t > >  bubbles, MappingParams mapping_params): sg(sg), mapper(mapper) ,component(component), bubbles(bubbles), mapping_params(mapping_params){
+    for (int i=0; i < mapper.read_to_tag.size() ; i++){
+        if (mapper.read_to_tag[i] == 0){
+            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+        }
 
+    }
+    std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
     for (auto bubble:bubbles){
         for (auto node:bubble){
             if (node_is_supported(node)){
@@ -35,6 +41,13 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
     }
     find_possible_haplotypes();
     std::cout << "mapping data sufficient to phase, in principal, " << phaseable_bubbles.size() << "  bubbles from " << bubbles.size() << " bubbles in total \n";
+    for (int i=0; i < mapper.read_to_tag.size() ; i++){
+        if (mapper.read_to_tag[i] == 0){
+            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+        }
+
+    }
+    std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n 7891 "<< mapper.read_to_tag[7841] << " " << mapper.read_to_tag[8061] << "\n";
     load_barcode_mappings();
 
     for (auto n:component) {
@@ -50,12 +63,21 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
 
 void ComponentPhaser::load_barcode_mappings(){
     std::set<prm10xTag_t> barcodes_mapped_to;
+    for (int i=0; i < mapper.read_to_tag.size() ; i++){
+        if (mapper.read_to_tag[i] == 0){
+            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+        }
+
+    }
+    if (mapper.read_to_tag[8061] == 0){std::cout << "yes \n";}
+    std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n" << mapper.read_to_tag[7841] << " " << mapper.read_to_tag[8061] << "\n";
     // only care about barcodes for nodes in phaseable bubbles
     for (auto bubble:phaseable_bubbles) {
         print_vector(bubble);
         int mappings_to_bubble = 0;
         int mappings_to_bubble_used = 0;
         std::set<prm10xTag_t> barcodes_bubble_mapped_to;
+        int kmer_mappings_to_bubble_used = 0;
         for (auto node:bubble) {
 
             std::vector<ReadMapping> mappings = mapper.reads_in_node[node];
@@ -65,10 +87,9 @@ void ComponentPhaser::load_barcode_mappings(){
             // count each barcode mapping to a node in a phaseable bubble
             for (auto mapping:mappings) {
                 if (mapping.unique_matches > mapping_params.min_kmer_mappings) {
-                    if (std::find(supported_nodes.begin(), supported_nodes.end(), mapping.node) !=
-                        supported_nodes.end()) {
+
                         prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
-                        if (tag == 0) {std::cout << mapping.read_id << " " << mapping.unique_matches << " " << mapper.read_to_tag[mapping.read_id] << " ";
+                        if (tag == 0) {std::cout << " id: " << mapping.read_id << " matches " << mapping.unique_matches << " tag:  " << mapper.read_to_tag[mapping.read_id] << " node:  " <<  mapper.read_to_node[mapping.read_id] << " name: "<< mapper.read_names[mapping.read_id];
                         } else {
 
                             barcode_node_mappings[tag][node] += mapping.unique_matches;
@@ -77,11 +98,12 @@ void ComponentPhaser::load_barcode_mappings(){
                             barcodes_node_mapped_to.insert(tag);
                             barcodes_bubble_mapped_to.insert(tag);
                             mappings_to_bubble_used += 1;
+                            kmer_mappings_to_bubble_used += mapping.unique_matches;
                         }
                     }
-                }
+
             }
-            std::cout << barcodes_node_mapped_to.size() << " barcodes mapped to \n node in haplotypes:" << std::endl;
+            std::cout << std::endl << "used " << mappings_to_bubble_used << " mappings, " << kmer_mappings_to_bubble_used << " kmers, " << barcodes_node_mapped_to.size() << " barcodes mapped to \n node in haplotypes:" << std::endl;
             print_vector(node_haplotype_map[node]);
             for (auto h: node_haplotype_map[node]) {
                 for (auto tag: barcodes_node_mapped_to) {
@@ -93,6 +115,10 @@ void ComponentPhaser::load_barcode_mappings(){
         std::cout << barcodes_bubble_mapped_to.size() << " barcodes mapped to bubble" << std::endl;
 
 
+    }
+    for (int i=0; i <possible_haplotypes.size() ; i++) {
+
+        std::cout << i << " " << tags_supporting_haplotypes[i].size() << std::endl;
     }
     // phasing barcodes map to nodes in at least 2 bubbles
     for (auto tag:barcodes_mapped_to){
@@ -228,15 +254,19 @@ size_t ComponentPhaser::phase(){
     std::cout << "barcode votex \n";
     print_voting_stats(barcode_votes);
     print_vector(barcode_votes_ordered);
+    for (auto ind:barcode_votes_ordered) { std::cout << barcode_votes[ind] << " ";} std::cout << std::endl;
     std::cout << "kmer votex \n";
     print_voting_stats(overall_votes);
-    print_vector(overall_votes_ordered);
+    print_vector(overall_votes_ordered);    for (auto ind:overall_votes_ordered) { std::cout << overall_votes[ind] << " ";} std::cout << std::endl;
+
     std::cout << "barcode pair  votex \n";
     print_voting_stats(pair_votes);
-    print_vector(pair_votes_ordered);
+    print_vector(pair_votes_ordered);    for (auto ind:pair_votes_ordered) { std::cout << pair_votes[ind] << " ";} std::cout << std::endl;
+
     std::cout << "barcodes selecting votes \n";
     print_voting_stats(barcode_selecting_votes);
-    print_vector(barcodes_selecting_ordered);
+    print_vector(barcodes_selecting_ordered);    for (auto ind:barcodes_selecting_ordered) { std::cout << barcode_selecting_votes[ind] << " ";} std::cout << std::endl;
+
     int votes_agreeing = 0;
     // still haven't decded which scores are best....
     if (barcode_votes_ordered[0] == overall_votes_ordered[0]) {

@@ -214,6 +214,13 @@ void PhaseScaffolder::print_barcode_stats(){
 
 int PhaseScaffolder::phase_component(std::vector<std::vector<sgNodeID_t >> bubbles, std::vector<sgNodeID_t > component, int min_barcodes_mapping=2){
     MappingParams mp;
+    for (int i=0; i < mapper.read_to_tag.size() ; i++){
+        if (mapper.read_to_tag[i] == 0){
+            std::cout << i << ", " << mapper.read_names[i] << " " << mapper.read_to_node[i] << std::endl;;
+        }
+
+    }
+    mapper.read_to_tag[0] = 0;
     ComponentPhaser cp(sg, mapper, component, bubbles,mp);
 
 
