@@ -90,6 +90,7 @@ void ComponentPhaser::load_barcode_mappings(){
         int kmer_mappings_to_bubble_used = 0;
         int count = 0;
         for (auto node:bubble) {
+            int mappings_to_node_used = 0;
 
             std::vector<ReadMapping> mappings = mapper.reads_in_node[node];
             std::set<prm10xTag_t> barcodes_node_mapped_to;
@@ -112,7 +113,7 @@ void ComponentPhaser::load_barcode_mappings(){
                         } else {
 
                             barcode_node_mappings[tag][node] += mapping.unique_matches;
-
+                            mappings_to_node_used += 1;
                             barcodes_mapped_to.insert(tag);
                             barcodes_node_mapped_to.insert(tag);
                             barcodes_bubble_mapped_to.insert(tag);
@@ -122,7 +123,7 @@ void ComponentPhaser::load_barcode_mappings(){
                     }
 
             }
-            std::cout << std::endl << "used " << mappings_to_bubble_used << " mappings, " << kmer_mappings_to_bubble_used << " kmers, " << barcodes_node_mapped_to.size() << " barcodes mapped to \n node in haplotypes:" << std::endl;
+            std::cout << std::endl << "node " << mappings_to_node_used << "used " << mappings_to_bubble_used << " mappings, " << kmer_mappings_to_bubble_used << " kmers, " << barcodes_node_mapped_to.size() << " barcodes mapped to \n node in haplotypes:" << std::endl;
             print_vector(node_haplotype_map[node]);
             for (auto h: node_haplotype_map[node]) {
                 for (auto tag: barcodes_node_mapped_to) {
