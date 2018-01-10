@@ -62,6 +62,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                                     break; //invalid tags with non-ACGT chars
                             }
                         }
+                        if (tag == 0) std::cout << "tag 0: " << read.name << " " << read.seq << std::endl;
 #pragma omp critical (read_to_tag)
                         {
                             //TODO: inefficient
@@ -115,7 +116,9 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
 #pragma omp critical(add_node_to_tag)
                 tags_to_nodes[read_to_tag[mapping.read_id]].push_back(mapping.node);
                 ++mapped_count;
-            }
+                if (read_to_tag[mapping.read_id] == 0) std::cout << read.name << " " << read.seq << std::endl;
+
+                }
             auto tc = ++total_count;
             if (tc % 100000 == 0) std::cout << mapped_count << " / " << tc << std::endl;
 #pragma omp critical

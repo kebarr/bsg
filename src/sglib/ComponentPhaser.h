@@ -30,7 +30,7 @@ struct HaplotypeScore{
     int kmer_support = 0;
     int barcodes_against_pair= 0;
     int pair_support = 0;
-    int pair_kmer_support = 0;
+    //int pair_kmer_support = 0;
     int barcodes_selecting = 0;
     size_t  index;
 
@@ -59,7 +59,7 @@ public:
 
 private:
     std::vector<HaplotypeScore>  score_haplotypes();
-    std::map<sgNodeID_t , std::vector<size_t > > bubble_map;
+    std::map<sgNodeID_t , std::vector<size_t > > node_haplotype_map;
     // determine if bubble has enough mappings to be phaseable
     bool bubble_is_supported(std::vector<sgNodeID_t > );
     bool node_is_supported(sgNodeID_t);
