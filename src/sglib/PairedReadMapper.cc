@@ -28,9 +28,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
         }
         while (c) {
             mapping.read_id = (read.id) * 2 + offset;
-            if (mapping.read_id > 10000){
-                std::cout << "here: " << std::endl;
-            }
+
             //this enables partial read re-mapping by setting read_to_node to 0
             if (read_to_node.size()<=mapping.read_id or 0==read_to_node[mapping.read_id]) {
                 mapping.node = 0;
@@ -78,7 +76,6 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                                 read_to_tag[mapping.read_id] = tag;
                                 read_to_tag[mapping.read_id - 1] = tag;
                             }
-                            if (read_to_tag[mapping.read_id] == 0) std::cout << read.name << " " << read.seq << std::endl;
                         }
                     } else {
                         std::cout << "Read name too short to contain 10x barcode: " << read.name << std::endl;
@@ -118,8 +115,6 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
             }
             if (mapping.node != 0 and mapping.unique_matches >= min_matches) {
                 //TODO: set read id and add to map collection
-                std::cout << "mapped: " << read.name << " id: " << mapping.read_id << " tag: " << read_to_tag[mapping.read_id] << " to node: " << mapping.node << " tag -1: " << read_to_tag[mapping.read_id-1] << " " << read_to_tag.size() << "\n";
-                //mapped: @SN7001150:517:HHKWJBCXY:2:2216:16766:98078_TACTAGGAGAGTCTGG id: 14974 tag: 3341323130 to node: 13 tag -1: 2232226989 107488
 
                 mapping.read_id=(read.id)*2+offset;
 
@@ -148,14 +143,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
     for (sgNodeID_t n=1;n<reads_in_node.size();++n){
         std::sort(reads_in_node[n].begin(),reads_in_node[n].end());
     }
-    // here and outside outputs identical
-    std::ofstream o1("rtt2.txt");
-    o1 << "'";
-    for (auto r:read_to_tag){
-        o1 << r << "\n";
-    }
-    o1 << "'" <<std::endl;
-    std::cout << "'" <<std::endl;
+
     return total_count;
 }
 
@@ -243,16 +231,28 @@ void PairedReadMapper::remap_reads(){
 
     } else if (readType == prm10x) {
         auto r1c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read1filename, 1, true);
-        std::cout << "rtt: " << read_to_tag.size() << std::endl;
         auto r2c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read2filename, 2, true);
-        std::ofstream o1("rtt1.txt");
-        o1 << "'";
-        for (auto r:read_to_tag){
-            o1 << r << "\n";
+        int i =0;
+        // number of barcodes and kmers mapped are totally diffwerent
+        std::cout << "mapped " << sg.oldnames.size() << " " << reads_in_node.size() << " "  << sg.nodes.size() << " \n";
+        for (auto n:sg.nodes){
+            std::cout << n.sequence.size() << " ";
         }
-        o1 << "'" <<std::endl;
-        std::cout << "rtt: " << read_to_tag.size() << " " << read_to_tag[14974] << std::endl;
-        // rtt: 7487 3341323130
+        std::cout << std::endl;
+                  std::ofstream o("new.txt");
+
+        for (i; i <sg.oldnames.size() ; i++){
+            std::set<prm10xTag_t > tags;
+            auto m=reads_in_node[i];
+            std::cout << sg.oldnames[i] << " ";
+            int l = 0;
+            for (auto n:m){
+                //std::cout << read_to_tag[n.read_id] << " " << n.unique_matches << " ";
+                l += n.unique_matches;
+                tags.insert(read_to_tag[n.read_id]);
+            }
+            o << sg.oldnames[i] << " " << tags.size() << " count: " <<  l << std::endl;
+        }
         //now populate the read_to_node array
         assert(r1c == r2c);
         read_to_node.resize(r1c * 2 + 1, 0);

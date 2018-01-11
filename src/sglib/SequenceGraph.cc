@@ -347,6 +347,7 @@ void SequenceGraph::load_from_gfa(std::string filename) {
             seq+=line;
         }
     }
+
     std::cout<<nodes.size()-1<<" nodes loaded! "<<rcnodes<<" canonised"<<std::endl;
 
     //load store all conections.
@@ -395,6 +396,8 @@ void SequenceGraph::load_from_gfa(std::string filename) {
     if (dist_egt0 > lcount*0.5f) {
         std::cout << "Warning: The loaded graph contains " << dist_egt0 << " non-overlapping links out of " << lcount << std::endl;
     }
+
+
     std::cout<<nodes.size()-1<<" nodes after connecting with "<<lcount<<" links"<<std::endl;
 }
 

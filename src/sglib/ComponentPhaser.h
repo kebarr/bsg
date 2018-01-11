@@ -78,7 +78,7 @@ private:
     std::map<sgNodeID_t , int> node_bubble_dict;
     std::vector<HaplotypeScore> haplotype_scores;
 
-    size_t haplotype_selected_by_barcode(prm10xTag_t );
+    std::vector<size_t> haplotype_selected_by_barcode(prm10xTag_t );
 
     void print_haplotype(std::vector<sgNodeID_t > vec);
 };

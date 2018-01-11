@@ -14,23 +14,17 @@ void print_vector(std::vector<T> vec){
 
 
 ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, std::vector<sgNodeID_t > component, std::vector<std::vector<sgNodeID_t > >  bubbles, MappingParams mapping_params): sg(sg), mapper(mapper) ,component(component), bubbles(bubbles), mapping_params(mapping_params){
-    for (int i=0; i < mapper.read_to_tag.size() ; i++){
-        if (mapper.read_to_tag[i] == 0){
-            std::cout << i << ", "<< " " << mapper.read_to_node[i] << std::endl;;
-        }
-
-    }
-    std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
-    for (auto bubble:bubbles){
+   for (auto bubble:bubbles){
         for (auto node:bubble){
             if (node_is_supported(node)){
                 supported_nodes.push_back(node);
+                std::cout << node << " ";
             } else {
                 unsupported_nodes.push_back(node);
             }
         }
     }
-    std::cout << "component of " << component.size() << " nodes  contains " << supported_nodes.size() << " het nodes with supporting mappings \n";
+    std::cout << std::endl << "component of " << component.size() << " nodes  contains " << supported_nodes.size() << " het nodes with supporting mappings \n";
 
     // order is hard here- node may be supported, but then other bubble mapped to is unsupported
     load_bubbles();
@@ -57,31 +51,24 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
             hom_nodes.push_back(n);
         }
     }
+    std::cout << "nodes: " << std::endl;
+
+    for (auto b:phaseable_bubbles){
+        for (auto n:b){
+            std::cout << n << " ";
+        }
+        std::cout << std::endl;
+
+    }
+    std::cout << std::endl;
 };
 
 // want to reduce number of candidate haplotypes by only using bubbles that mappings can actually phase
 
 void ComponentPhaser::load_barcode_mappings(){
     std::set<prm10xTag_t> barcodes_mapped_to;
-    int counter = 0;
-    for (auto i: mapper.read_to_tag){
-        /*if (i == mapper.read_to_tag[0]){
-            std::cout << i << ", " << mapper.read_names[counter] << " " << mapper.read_to_node[counter] << std::endl;;
-        }
-        std::cout << counter << ": " << i << ", ";*/
-        counter +=1;
 
-    }
-    std::ofstream o1("rtt3.txt");
-    o1 << "'";
-    for (auto r:mapper.read_to_tag){
-        o1 << r << "\n";
-    }
-    // output file is identical to previous!!! no tags are 0
-    o1 << "'" <<std::endl;
-    if (mapper.read_to_tag[8061] == 0){std::cout << " yes \n";}
-    std::cout << "\n&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n" << mapper.read_to_tag[7841] << " " << mapper.read_to_tag[8061] << " "<< mapper.read_to_tag.size() << " node:  " <<  mapper.read_to_node.size()<< "\n";
-    // only care about barcodes for nodes in phaseable bubbles
+     // only care about barcodes for nodes in phaseable bubbles
     for (auto bubble:phaseable_bubbles) {
         print_vector(bubble);
         int mappings_to_bubble = 0;
@@ -101,16 +88,7 @@ void ComponentPhaser::load_barcode_mappings(){
                 if (mapping.unique_matches > mapping_params.min_kmer_mappings) {
 
                         prm10xTag_t tag = mapper.read_to_tag[mapping.read_id];
-                        if (tag == 0) {std::cout << " id: " << mapping.read_id << " matches " << mapping.unique_matches << " tag:  " << mapper.read_to_tag[mapping.read_id] << " node:  " <<  mapper.read_to_node[mapping.read_id];
-                            count +=1;
-                            std::ofstream o1("rtt_seroed" + std::to_string(count) + ".txt");
-                            o1 << "'";
-                            for (auto r:mapper.read_to_tag){
-                                o1 << r << "\n";
 
-                            }
-                            o1 << "'" <<std::endl;
-                        } else {
 
                             barcode_node_mappings[tag][node] += mapping.unique_matches;
                             mappings_to_node_used += 1;
@@ -119,11 +97,11 @@ void ComponentPhaser::load_barcode_mappings(){
                             barcodes_bubble_mapped_to.insert(tag);
                             mappings_to_bubble_used += 1;
                             kmer_mappings_to_bubble_used += mapping.unique_matches;
-                        }
+
                     }
 
             }
-            std::cout << std::endl << "node " << mappings_to_node_used << "used " << mappings_to_bubble_used << " mappings, " << kmer_mappings_to_bubble_used << " kmers, " << barcodes_node_mapped_to.size() << " barcodes mapped to \n node in haplotypes:" << std::endl;
+            std::cout << std::endl << sg.oldnames[node] << "node " << mappings_to_node_used << "used " << mappings_to_bubble_used << " mappings, " << kmer_mappings_to_bubble_used << " kmers, " << barcodes_node_mapped_to.size() << " barcodes mapped to \n node in haplotypes:" << std::endl;
             print_vector(node_haplotype_map[node]);
             for (auto h: node_haplotype_map[node]) {
                 for (auto tag: barcodes_node_mapped_to) {
@@ -154,6 +132,27 @@ void ComponentPhaser::load_barcode_mappings(){
             phasing_barcodes.push_back(tag);
         }
     }
+    std::cout << " mappings to b" << mapper.tags_to_nodes[299333149].size() << " \n";
+    for (auto t : mapper.tags_to_nodes[299333149]){
+
+        for (auto m:mapper.reads_in_node[t]) {
+            if (std::find(supported_nodes.begin(), supported_nodes.end(), m.node) != supported_nodes.end()) {
+                std::cout << m.node << " " << m.unique_matches << " " << m.read_id << std::endl;
+            }
+            }
+
+    }
+    std::cout << " mappings to bnm\n";
+    // mappings disagree: mappings_to_line_contigs_relevant_data_only.txt 299333149 1850099 has > 80 from 4 read mappings, but 12 kmer matches here
+    for (auto b:barcode_node_mappings){
+        std::cout << b.first << " ";
+        int count = 0;
+        for (auto c:b.second){
+            std::cout << sg.oldnames[c.first] << " " << c.second << " ";
+            count += c.second;
+        }
+        std::cout << "second " << count<< std::endl;
+    }
     std::cout << phasing_barcodes.size() << " phasing barcodes of "<< barcodes_mapped_to.size() << std::endl;
 };
 
@@ -172,7 +171,7 @@ std::vector<size_t> sort_indexes(const std::vector<T> &v) {
     return idx;
 }
 
-size_t ComponentPhaser::haplotype_selected_by_barcode(prm10xTag_t barcode){
+std::vector<size_t> ComponentPhaser::haplotype_selected_by_barcode(prm10xTag_t barcode){
     // barcode selects a haplotype if it has most mppngs to that haplotype
     std::vector<int> nodes(possible_haplotypes.size());
     std::vector<int> scores(possible_haplotypes.size());
@@ -185,16 +184,55 @@ size_t ComponentPhaser::haplotype_selected_by_barcode(prm10xTag_t barcode){
             }
         }
     }
+    std::cout << barcode << ":\n";
+    print_vector(scores);
+    print_vector(nodes);
     auto scores_ordered = sort_indexes(scores);
     auto nodes_ordered = sort_indexes(nodes);
     auto highest_scored_haplotype = scores_ordered[0];
     auto most_voted_haplotype = nodes_ordered[0];
-    if (highest_scored_haplotype == most_voted_haplotype){
-        return highest_scored_haplotype;
-    } else if (highest_scored_haplotype = possible_haplotypes.size() - 1 - most_voted_haplotype){
-        return  highest_scored_haplotype;
+    print_vector(scores_ordered);
+    print_vector(nodes_ordered);
+    std::vector<size_t> winners;
+    // if 2 haplotypes tie by nodes mapped to but differr on kmers, pick onewith moe kmers
+    if (scores[highest_scored_haplotype] != 0) {
+        auto most_voted_votes = nodes[most_voted_haplotype];
+        std::vector<size_t > winners_nodes;
+        winners_nodes.push_back(most_voted_haplotype);
+        for (size_t i = 1;  i < possible_haplotypes.size(); i++) {
+            auto votes = nodes[nodes_ordered[i]];
+            if (votes == most_voted_votes){
+                winners_nodes.push_back(i);
+            } else {
+                break;
+            }
+        }
+        print_vector(winners_nodes);
+        if (highest_scored_haplotype == most_voted_haplotype) {
+            // as barcode could just map to subset of nodes in haplotype, and therefore two equally , need all highest scoring
+            //for (int i=1; i < possible_haplotypes.size(); i++) {
+            for (auto i:winners_nodes) {
+
+                auto score = scores[scores_ordered[i]];
+                if (score == scores[highest_scored_haplotype]){
+                    winners.push_back(i);
+                } else { // once we hit one with lower score, stop iterating and return winner
+                    return winners;
+                }
+
+            }
+        } else { // if multiple habe same number of nodes voted for, might not be ordered same as kmer votres
+            for (auto i:winners_nodes) {
+                if (scores[highest_scored_haplotype] == scores[i]){
+                    winners.push_back(i);
+
+                }
+            }
+            return  winners;
+
+        }
     } else {
-        return  possible_haplotypes.size();
+        return winners;
     }
 
 };
@@ -352,8 +390,10 @@ std::vector<HaplotypeScore>  ComponentPhaser::score_haplotypes(){
 
     }
     for (auto barcode:phasing_barcodes){
-        auto winner = haplotype_selected_by_barcode(barcode);
-        if (winner != possible_haplotypes.size()) {
+        auto winners = haplotype_selected_by_barcode(barcode);
+        print_vector(winners);
+        for (auto winner:winners) {
+
             scores[winner].barcodes_selecting += 1;
         }
     }
@@ -410,7 +450,7 @@ for (auto h:possible_haplotypes){
 
 
 
-    bool ComponentPhaser::node_is_supported(sgNodeID_t node){
+bool ComponentPhaser::node_is_supported(sgNodeID_t node){
     std::vector<ReadMapping> mappings = mapper.reads_in_node[node];
     // determine whether individual node has sufficient mappings to resolve
     // sufficient = mappings with barcodes that map to nodes in other bubbles in this component
