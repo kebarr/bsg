@@ -35,13 +35,6 @@ ComponentPhaser::ComponentPhaser(SequenceGraph &sg, PairedReadMapper &mapper, st
     }
     find_possible_haplotypes();
     std::cout << "mapping data sufficient to phase, in principal, " << phaseable_bubbles.size() << "  bubbles from " << bubbles.size() << " bubbles in total \n";
-    for (int i=0; i < mapper.read_to_tag.size() ; i++){
-        if (mapper.read_to_tag[i] == 0){
-            std::cout << i << ", " << " " << mapper.read_to_node[i] << std::endl;;
-        }
-
-    }
-    std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n 7891 "<< mapper.read_to_tag[7841] << " " << mapper.read_to_tag[8061] << "\n";
     load_barcode_mappings();
 
     for (auto n:component) {
@@ -132,8 +125,7 @@ void ComponentPhaser::load_barcode_mappings(){
             phasing_barcodes.push_back(tag);
         }
     }
-    std::cout << " mappings to b" << mapper.tags_to_nodes[299333149].size() << " \n";
-    for (auto t : mapper.tags_to_nodes[299333149]){
+   for (auto t : mapper.tags_to_nodes[299333149]){
 
         for (auto m:mapper.reads_in_node[t]) {
             if (std::find(supported_nodes.begin(), supported_nodes.end(), m.node) != supported_nodes.end()) {
@@ -148,10 +140,10 @@ void ComponentPhaser::load_barcode_mappings(){
         std::cout << b.first << " ";
         int count = 0;
         for (auto c:b.second){
-            std::cout << sg.oldnames[c.first] << " " << c.second << " ";
+            //std::cout << sg.oldnames[c.first] << " " << c.second << " ";
             count += c.second;
         }
-        std::cout << "second " << count<< std::endl;
+        //std::cout << "second " << count<< std::endl;
     }
     std::cout << phasing_barcodes.size() << " phasing barcodes of "<< barcodes_mapped_to.size() << std::endl;
 };
@@ -202,7 +194,7 @@ std::vector<size_t> ComponentPhaser::haplotype_selected_by_barcode(prm10xTag_t b
         for (size_t i = 1;  i < possible_haplotypes.size(); i++) {
             auto votes = nodes[nodes_ordered[i]];
             if (votes == most_voted_votes){
-                winners_nodes.push_back(i);
+                winners_nodes.push_back(nodes_ordered[i]);
             } else {
                 break;
             }
@@ -213,7 +205,7 @@ std::vector<size_t> ComponentPhaser::haplotype_selected_by_barcode(prm10xTag_t b
             //for (int i=1; i < possible_haplotypes.size(); i++) {
             for (auto i:winners_nodes) {
 
-                auto score = scores[scores_ordered[i]];
+                auto score = scores[i];
                 if (score == scores[highest_scored_haplotype]){
                     winners.push_back(i);
                 } else { // once we hit one with lower score, stop iterating and return winner
