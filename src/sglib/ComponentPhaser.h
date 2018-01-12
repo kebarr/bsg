@@ -32,6 +32,7 @@ struct HaplotypeScore{
     int pair_support = 0;
     //int pair_kmer_support = 0;
     int barcodes_selecting = 0;
+    int barcodes_selecting_pair = 0;
     size_t  index;
 
 };
