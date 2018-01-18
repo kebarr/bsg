@@ -17,10 +17,10 @@
 
 struct MappingParams{
     // arbitrary defaults
-    int min_node_mappings_with_enough_matches = 2;
-    int min_node_mappings = 2;
+    int min_node_mappings_with_enough_matches = 1;
+    int min_node_mappings = 1;
     int min_nodes_per_tag = 2;
-    int min_kmer_mappings = 2;
+    int min_kmer_mappings = 1;
 };
 
 struct HaplotypeScore{
@@ -30,7 +30,7 @@ struct HaplotypeScore{
     int kmer_support = 0;
     int barcodes_against_pair= 0;
     int pair_support = 0;
-    //int pair_kmer_support = 0;
+    int pair_kmer_support = 0;
     int barcodes_selecting = 0;
     int barcodes_selecting_pair = 0;
     size_t  index;
@@ -45,7 +45,7 @@ public:
     std::vector<sgNodeID_t > component;
     std::vector<std::vector<sgNodeID_t > > bubbles;
     std::vector<sgNodeID_t > hom_nodes;
-
+    std::pair<std::set<prm10xTag_t >, std::set<prm10xTag_t > > barcodes_supporting_winners;
     std::vector<std::vector<sgNodeID_t > > phaseable_bubbles;
     std::vector<std::vector<sgNodeID_t > > possible_haplotypes;
     // barcodes which map to nodes from 2 separate bubbles
@@ -55,10 +55,16 @@ public:
     void load_bubbles();
     size_t phase();
     void find_possible_haplotypes();
+    // these are barcodes which have any mappings to hap
+
     std::map<size_t , std::set<prm10xTag_t >> tags_supporting_haplotypes;
     std::pair<size_t , size_t > winning_pair;
+    bool can_phase();
 
 private:
+    // these are barcodes which choose this hap
+    std::vector<std::set<prm10xTag_t > > barcodes_supporting_haps;
+
     std::vector<HaplotypeScore>  score_haplotypes();
     std::map<sgNodeID_t , std::vector<size_t > > node_haplotype_map;
     // determine if bubble has enough mappings to be phaseable

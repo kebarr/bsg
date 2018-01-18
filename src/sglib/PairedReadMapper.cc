@@ -8,11 +8,13 @@
 #include "PairedReadMapper.hpp"
 
 
-uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_matches, std::unordered_map<uint64_t , graphPosition> & kmer_to_graphposition, std::string filename, uint64_t offset , bool is_tagged=false) {
+uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_matches, std::unordered_map<uint64_t , graphPosition> & kmer_to_graphposition, std::string filename, uint64_t offset, std::string mappingfilename="" , bool is_tagged=false) {
     std::cout<<"mapping reads!!!"<<std::endl;
     /*
      * Read mapping in parallel,
      */
+    std::ofstream mappingfile(mappingfilename);
+
     FastqReader<FastqRecord> fastqReader({0},filename);
     std::atomic<uint64_t> mapped_count(0),total_count(0);
 #pragma omp parallel shared(fastqReader) num_threads(1)// this lione has out of bounds error on my weird read file AND  ‘PairedReadMapper::reads_in_node’ is not a variable in clause ‘shared’ when compiling on
@@ -63,6 +65,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                                     break; //invalid tags with non-ACGT chars
                             }
                         }
+                        tag_map[tag] = barcode;
                         if (tag == 0) std::cout << "tag 0: " << read.name << " " << read.seq << std::endl;
 #pragma omp critical (read_to_tag)
                         {
@@ -114,6 +117,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
                 }
             }
             if (mapping.node != 0 and mapping.unique_matches >= min_matches) {
+
                 //TODO: set read id and add to map collection
 
                 mapping.read_id=(read.id)*2+offset;
@@ -124,6 +128,10 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
 #pragma omp critical(add_node_to_tag)
                 tags_to_nodes[read_to_tag[mapping.read_id]].push_back(mapping.node);
                 ++mapped_count;
+                if (mappingfilename != "") {
+                    mappingfile << ">"<< read.name << " " << sg.oldnames[mapping.node] << "\n" << read.seq
+                                << std::endl;
+                }
                 if (read_to_tag[mapping.read_id] == 0) std::cout << read.name << " " << read.seq << std::endl;
 
 
@@ -230,8 +238,8 @@ void PairedReadMapper::remap_reads(){
         //read_to_tag.clear();
 
     } else if (readType == prm10x) {
-        auto r1c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read1filename, 1, true);
-        auto r2c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read2filename, 2, true);
+        auto r1c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read1filename, 1, "mappings_to_validated_cases_r1.txt", true);
+        auto r2c = process_reads_from_file(k, min_matches, kmer_to_graphposition, read2filename, 2,"mappings_to_validated_cases_r2.txt", true);
         int i =0;
         // number of barcodes and kmers mapped are totally diffwerent
         std::cout << "mapped " << sg.oldnames.size() << " " << reads_in_node.size() << " "  << sg.nodes.size() << " \n";
@@ -254,7 +262,7 @@ void PairedReadMapper::remap_reads(){
             o << sg.oldnames[i] << " " << tags.size() << " count: " <<  l << std::endl;
         }
         //now populate the read_to_node array
-        assert(r1c == r2c);
+        //assert(r1c == r2c);
         read_to_node.resize(r1c * 2 + 1, 0);
         for (auto &rin:reads_in_node)
             for (auto &mr:rin) {

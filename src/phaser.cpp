@@ -71,7 +71,7 @@ int main(int argc, char * argv[]) {
 
     std::string to_map = "";
     if (dump_mapped.size() != 0){
-        std::cout << dump_mapped.size() << dump_mapped[0].size() << dump_mapped[0] << std::endl;
+        std::cout << "dump mapped size: " << dump_mapped.size() << " dump mapped 0 size: "<< dump_mapped[0].size() << " dump mapped 0: " << dump_mapped[0] << std::endl;
         to_map = dump_mapped[0];
     }
     std::string from_map = "";

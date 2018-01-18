@@ -60,10 +60,11 @@ public:
         reads_in_node.resize(sg.nodes.size());
         std::cout << "reads_in_node size; " << reads_in_node.size() << std::endl;
     };
+    std::map< prm10xTag_t , std::string> tag_map;
     void map_reads(std::string , std::string , prmReadType , uint64_t );
     void remove_obsolete_mappings();
     void remap_reads();
-    uint64_t process_reads_from_file(uint8_t, uint16_t, std::unordered_map<uint64_t , graphPosition> &, std::string , uint64_t, bool );
+    uint64_t process_reads_from_file(uint8_t, uint16_t, std::unordered_map<uint64_t , graphPosition> &, std::string , uint64_t, std::string, bool );
     void save_to_disk(std::string filename);
     void load_from_disk(std::string filename);
     void print_stats();
