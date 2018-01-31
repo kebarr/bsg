@@ -179,6 +179,9 @@ add_executable(kc_comp
 add_executable(seq-sorter
                src/seq-sorter.cpp)
 
+add_executable(kci-comparer
+        src/kci-comparer.cpp)
+
 target_link_libraries(gfa-dumppath sequence_graph)
 target_link_libraries(gfa-qc sequence_graph)
 target_link_libraries(seq-sorter sequence_graph)

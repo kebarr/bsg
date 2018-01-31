@@ -150,14 +150,14 @@ std::vector<SequenceSubGraph> Scaffolder::get_all_bubbly_subgraphs(uint32_t maxs
                 if (fl2.size()!=1) break;
                 if (fl2[0].dest!=fl1[0].dest) break;
 
-                auto p1kci=kci.compute_compression_for_node(fn[0].dest);
-                if (p1kci<min_c1 or p1kci>max_c1) break;
-                auto p2kci=kci.compute_compression_for_node(fn[1].dest);
-                if (p2kci<min_c1 or p2kci>max_c1) break;
+                //auto p1kci=kci.compute_compression_for_node(fn[0].dest);
+                //if (p1kci<min_c1 or p1kci>max_c1) break;
+                //auto p2kci=kci.compute_compression_for_node(fn[1].dest);
+                //if (p2kci<min_c1 or p2kci>max_c1) break;
 
                 auto next_end=fl2[0].dest;
-                auto next_end_kci=kci.compute_compression_for_node(next_end);
-                if (next_end_kci<min_c2 or next_end_kci>max_c2) break;
+                //auto next_end_kci=kci.compute_compression_for_node(next_end);
+                //if (next_end_kci<min_c2 or next_end_kci>max_c2) break;
 
                 //all conditions met, update subgraph
                 subgraph.nodes.push_back(fn[0].dest);
