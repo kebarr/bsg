@@ -13,36 +13,35 @@ void output_kci_for_assembly(std::string gfa_name,std::string assembly_name, std
     SequenceGraph sg;
     sg.load_from_gfa(gfa_name);
 
-    std::cout<<std::endl<<"=== Loading reads compression index ==="<<std::endl;
-    //compression index
-    KmerCompressionIndex kci(sg,max_mem_gb*1024L*1024L*1024L);
+std::cout<<std::endl<<"=== Loading reads compression index ==="<<std::endl;
+//compression index
+KmerCompressionIndex kci(sg,max_mem_gb*1024L*1024L*1024L);
 
-        kci.index_graph();
-            kci.start_new_count();
-            kci.add_counts_from_file(cidxread1);
-            kci.add_counts_from_file(cidxread2);
+    kci.index_graph();
+        kci.start_new_count();
+        kci.add_counts_from_file(cidxread1);
+        kci.add_counts_from_file(cidxread2);
 
-    if (dump_cidx!=""){
-        kci.save_to_disk(dump_cidx);
-    }
+if (dump_cidx!=""){
+    kci.save_to_disk(dump_cidx);
+}
 
-    if (kci.read_counts.size()>0) {
-        kci.compute_compression_stats();
-        kci.dump_histogram(assembly_name + "kci_histogram.csv");
-    }
-    std::string outname = assembly_name+ "_kci_per_node.csv";
-    std::ofstream kci_assembly(outname);
-    kci_assembly << "   ,";
-    for (auto node: sg.nodes){
-        kci_assembly<< sg.oldnames[node] << ", ";
-    }
-    kci_assembly<< std::endl;
-    for (auto node: sg.nodes){
-        auto kci_node = kci.compute_compression_for_node(node);
-        kci_assembly << kci_node <<", ";
+if (kci.read_counts.size()>0) {
+    kci.compute_compression_stats();
+    kci.dump_histogram(assembly_name + "kci_histogram.csv");
+}
+std::string outname = assembly_name+ "_kci_per_node.csv";
+std::ofstream kci_assembly(outname);
+for (size_t counter = 0; counter < sg.nodes.size(); counter++){
+    kci_assembly<< sg.oldnames[counter] << ", ";
+}
+kci_assembly<< std::endl;
+for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++){
+    auto kci_node = kci.compute_compression_for_node(counter);
+    kci_assembly << kci_node <<", ";
 
-    }
-    kci_assembly << std::endl;
+}
+kci_assembly << std::endl;
 }
 
 
@@ -109,6 +108,7 @@ int main(int argc, char * argv[]) {
     std::string fields[2];
     while (std::getline(infile, line)){
         std::istringstream(line) >> fields[0] >> fields[1];
+        std::cout << "calculating compression for: " << fields[0] << " from " << fields[1] << std::endl;
         output_kci_for_assembly(fields[0], fields[1], cidxreads1, cidxreads2, max_mem_gb, dump_cidx);
 
     }
