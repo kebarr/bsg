@@ -171,7 +171,7 @@ void KmerCompressionIndex::dump_histogram(std::string filename) {
     for (auto i=0;i<1000;++i) kchf<<i<<","<<covuniq[i]<<std::endl;
 }
 
-double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq) {
+double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq, uint16_t dataset) {
 
     auto & node=sg.nodes[_node>0 ? _node:-_node];
 
@@ -184,7 +184,7 @@ double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint
         auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
         if (nk!=graph_kmers.end() and nk->kmer == kmer and nk->count==1) {
             ++kcount;
-            kcov+=read_counts[0][nk-graph_kmers.begin()];
+            kcov+=read_counts[dataset][nk-graph_kmers.begin()];
         }
     }
 

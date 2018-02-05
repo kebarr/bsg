@@ -160,7 +160,7 @@ int main(int argc, char * argv[]) {
             kci.add_counts_from_file(cidxreads1[lib]);
             kci.add_counts_from_file(cidxreads2[lib]);
             for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++) {
-                auto kci_node = kci.compute_compression_for_node(counter);
+                auto kci_node = kci.compute_compression_for_node(counter, 10, lib);
                 kci_assembly << kci_node << ", ";
 
             }
