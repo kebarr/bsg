@@ -143,7 +143,7 @@ int main(int argc, char * argv[]) {
     std::cout<<std::endl<<"Testing GraphPartitioner"<<std::endl;
 
     auto bubblies=scaff.get_all_bubbly_subgraphs();
-    std::cout<<"Starting with "<<bubblies.size()<<" possible bubbles"<<std::endl;
+    std::cout<<"Starting with "<<bubblies.size()<<" possible bubblies"<<std::endl;
     uint64_t solved_count=0;
     for (auto bubbly:bubblies){
         std::cout<<std::endl<<"=== Analysing subgraph with "<<bubbly.nodes.size()<<" nodes"<<std::endl;

@@ -27,8 +27,11 @@ void KmerCompressionIndex::index_graph(){
     graph_kmers = kmerCount_SMR.process_from_memory();
 
     std::vector<uint64_t> uniqKmer_statistics(kmerCount_SMR.summaryStatistics());
+    // [0]- total records generated. [2] - number of reader records, graph treated like fasta
+
     std::cout << "Number of " << int(k) << "-kmers seen in assembly " << uniqKmer_statistics[0] << std::endl;
-    std::cout << "Number of contigs from the assembly " << uniqKmer_statistics[2] << std::endl;
+    std::cout << "Number of contigs from the assembly " << uniqKmer_statistics[2] << " gk size: " << graph_kmers.size() <<  std::endl;
+
 }
 
 void KmerCompressionIndex::load_from_disk(std::string filename) {
@@ -122,7 +125,6 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
             for (uint64_t i=0;i<read_counts.back().size();++i) read_counts.back()[i]+=thread_counts[i];
         }
     }
-    // somehow for my test data with 700 reads, totak count is 834 for r2...
     std::cout << rp << " reads processed "<< present <<" / " << present+absent << " kmers found" << std::endl;
 }
 

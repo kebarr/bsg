@@ -128,26 +128,48 @@ std::vector<SequenceSubGraph> Scaffolder::get_all_bubbly_subgraphs(uint32_t maxs
      * the loop always keep the first and the last elements as c=2 collapsed nodes.
      * it starts with a c=2 node, and goes thorugh all bubbles fw, then reverts the subgraph and repeats
      */
+    for (int n=0; n<sg.oldnames.size(); n++){
+        std::cout << n << ": " << sg.oldnames[n] << "\n";
+    }
     SequenceSubGraph subgraph(sg);
     for (auto n=1;n<sg.nodes.size();++n){
         if (used[n] or sg.nodes[n].status==sgNodeDeleted) continue;
-        auto frontkci=kci.compute_compression_for_node(n);
-        if (frontkci>max_c2 or frontkci<min_c2) continue;
+        //auto frontkci=kci.compute_compression_for_node(n);
+        //if (frontkci>max_c2 or frontkci<min_c2) continue;
         used[n]=true;
         subgraph.nodes.clear();
 
         subgraph.nodes.push_back(n);
-
+        std::cout << "Node: " << sg.oldnames[n] << "\n";
         //two passes: 0->fw, 1->bw, path is inverted twice, so still n is +
         for (auto pass=0; pass<2; ++pass) {
             //while there's a possible bubble fw.
             for (auto fn = sg.get_fw_links(subgraph.nodes.back()); fn.size() == 2; fn = sg.get_fw_links(subgraph.nodes.back())) {
+                std::cout << "forward lnks: \n";
+                for (auto f: fn){
+                    std::cout << sg.oldnames[f.source> 0? f.source:-f.source] << " " << sg.oldnames[f.dest >0? f.dest:-f.dest] << " ";
+                    //std::cout << f.source << " " << f.dest << " ";
+                }
+                std::cout << std::endl;
                 //if it is not a real bubble, get out.
                 if (sg.get_bw_links(fn[0].dest).size()!=1 or sg.get_bw_links(fn[0].dest).size()!=1) break;
                 auto fl1=sg.get_fw_links(fn[0].dest);
+                std::cout << "fl1 lnks: \n";
+                for (auto f: fl1){
+                    std::cout << sg.oldnames[f.source> 0? f.source:-f.source] << " " << sg.oldnames[f.dest >0? f.dest:-f.dest] << " ";
+//                    std::cout << sg.oldnames[f.source] << " " << sg.oldnames[f.dest] << " ";
+                }
+                std::cout << std::endl;
                 if (fl1.size()!=1) break;
                 auto fl2=sg.get_fw_links(fn[1].dest);
                 if (fl2.size()!=1) break;
+                std::cout << "fl2 lnks: \n";
+                for (auto f: fl2){
+                    std::cout << sg.oldnames[f.source> 0? f.source:-f.source] << " " << sg.oldnames[f.dest >0? f.dest:-f.dest] << " ";
+
+//                    std::cout << sg.oldnames[f.source] << " " << sg.oldnames[f.dest] << " ";
+                }
+                std::cout << std::endl;
                 if (fl2[0].dest!=fl1[0].dest) break;
 
                 //auto p1kci=kci.compute_compression_for_node(fn[0].dest);
@@ -158,13 +180,20 @@ std::vector<SequenceSubGraph> Scaffolder::get_all_bubbly_subgraphs(uint32_t maxs
                 auto next_end=fl2[0].dest;
                 //auto next_end_kci=kci.compute_compression_for_node(next_end);
                 //if (next_end_kci<min_c2 or next_end_kci>max_c2) break;
+                std::cout << "adding to subgraph" << std::endl;
 
                 //all conditions met, update subgraph
                 subgraph.nodes.push_back(fn[0].dest);
                 subgraph.nodes.push_back(fn[1].dest);
                 subgraph.nodes.push_back(next_end);
                 used[(next_end>0?next_end:-next_end)]=true;
+                std::cout << "next: " << subgraph.nodes.back()<< std::endl;
 
+                //for (auto f: sg.get_fw_links(subgraph.nodes.back())){
+                  //  std::cout << subgraph.nodes.back() << " " << sg.oldnames[f.source> 0? f.source:-f.source] << " " << sg.oldnames[f.dest >0? f.dest:-f.dest] << " ";
+                    //std::cout << f.source << " " << f.dest << " ";
+                //}
+                std::cout << std::endl;
             }
             SequenceSubGraph new_subgraph(sg);
             for (auto it=subgraph.nodes.rbegin();it<subgraph.nodes.rend();++it) new_subgraph.nodes.push_back(-*it);

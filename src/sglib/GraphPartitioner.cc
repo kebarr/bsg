@@ -24,7 +24,10 @@ std::vector<std::vector<bool>> GraphPartitioner::tags_patterns(const SequenceSub
         for (auto r:rmappers[0].reads_in_node[n])
             if (rmappers[0].read_to_tag[r.read_id]>0) tags.insert(rmappers[0].read_to_tag[r.read_id]);
     }
-
+    //for (auto tag: tags) {
+    //    std::cout << tag << " ";
+    //}
+    std::cout << std::endl;
     //create the node/tag read matrix.
     std::map<uint32_t,uint32_t> tags_to_local;
     std::vector<uint32_t>local_to_tag;
@@ -59,7 +62,12 @@ std::vector<std::vector<bool>> GraphPartitioner::tags_patterns(const SequenceSub
             if (!repeated) tp.push_back(newpat);
         }
     }
-
+for (auto p:tp){
+    for (auto t:p){
+        std::cout << t << " ";
+    }
+    std::cout << std::endl;
+}
     return tp;
 }
 
