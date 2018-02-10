@@ -19,7 +19,7 @@ public:
 
     void save_to_disk(std::string filename);
     void load_from_disk(std::string filename);
-    void compute_compression_stats();
+    void compute_compression_stats(size_t lib=0);
 
     void dump_histogram(std::string filename);
 

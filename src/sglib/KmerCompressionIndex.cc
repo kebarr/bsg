@@ -130,7 +130,7 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
 
 
 
-void KmerCompressionIndex::compute_compression_stats() {
+void KmerCompressionIndex::compute_compression_stats(size_t lib) {
     //compute mean, median and mode, as of now, only use the first read count
 
     uint64_t covuniq[1001];
@@ -138,9 +138,9 @@ void KmerCompressionIndex::compute_compression_stats() {
     uint64_t tuniq=0,cuniq=0;
     for (uint64_t i=0; i<graph_kmers.size(); ++i){
         if (graph_kmers[i].count==1){
-            tuniq+=read_counts[0][i];
+            tuniq+=read_counts[lib][i];
             ++cuniq;
-            ++covuniq[(read_counts[0][i]<1000 ? read_counts[0][i] : 1000 )];
+            ++covuniq[(read_counts[lib][i]<1000 ? read_counts[lib][i] : 1000 )];
         }
     }
     uint64_t cseen=0,median=0;
