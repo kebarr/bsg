@@ -156,16 +156,16 @@ void KmerCompressionIndex::compute_compression_stats(size_t lib) {
 
 }
 
-void KmerCompressionIndex::dump_histogram(std::string filename) {
+void KmerCompressionIndex::dump_histogram(std::string filename, uint16_t dataset) {
     std::ofstream kchf(filename);
     uint64_t covuniq[1001];
     for (auto &c:covuniq)c=0;
     uint64_t tuniq=0,cuniq=0;
     for (uint64_t i=0; i<graph_kmers.size(); ++i){
         if (graph_kmers[i].count==1){
-            tuniq+=read_counts[0][i];
+            tuniq+=read_counts[dataset][i];
             ++cuniq;
-            ++covuniq[(read_counts[0][i]<1000 ? read_counts[0][i] : 1000 )];
+            ++covuniq[(read_counts[dataset][i]<1000 ? read_counts[dataset][i] : 1000 )];
         }
     }
     for (auto i=0;i<1000;++i) kchf<<i<<","<<covuniq[i]<<std::endl;
@@ -178,15 +178,25 @@ double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint
     std::vector<uint64_t> nkmers;
     StringKMerFactory skf(node.sequence,31);
     skf.create_kmers(nkmers);
+    //std::cout << node.sequence << std::endl;
+    int counter = 0;
+    int counter_pres = 0;
 
     uint64_t kcount=0,kcov=0;
+    std::cout << "kmers in nodes: " << nkmers.size() << std::endl;
     for (auto &kmer : nkmers){
+        // find kmer in graph kmer with count > 0?
         auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
         if (nk!=graph_kmers.end() and nk->kmer == kmer and nk->count==1) {
-            ++kcount;
-            kcov+=read_counts[dataset][nk-graph_kmers.begin()];
+            counter +=1;
+            ++kcount;// inrement number of (unique?? ) kmers on node
+            kcov+=read_counts[dataset][nk-graph_kmers.begin()]; // inrement coverage by count for this kmer in read set
+        } else if (nk!=graph_kmers.end() and nk->kmer == kmer and nk->count> 1) {
+            counter_pres+= 1;
         }
-    }
 
+    }
+    std::cout << counter << " kmers found " << counter_pres << " kmers  count > 1 \n";
+    // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
     return (((double) kcov)/kcount )/uniq_mode;
 }
