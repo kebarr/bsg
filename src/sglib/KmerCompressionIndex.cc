@@ -189,7 +189,7 @@ void KmerCompressionIndex::compute_compression_stats(size_t lib) {
     std::cout << "Mode coverage for unique kmers:   " << mode <<std::endl;
 
     if (median<.9*mode or median>.9*mode ) std::cout<<"WARNING -> median and mode highly divergent"<<std::endl;
-    uniq_mode=mode;
+    uniq_mode=mode != 0 ? mode:1;// this was usually 0... makes no sense to have a kmer that appears 0 times!!
 
 }
 
