@@ -155,21 +155,42 @@ int main(int argc, char * argv[]) {
             kci_assembly << sg.oldnames[counter] << ", ";
         }
         kci_assembly << std::endl;
+
         for(int lib=0;lib<cidxreads1.size();lib++) {
+            int count = 0;
             kci.start_new_count();
             kci.add_counts_from_file(cidxreads1[lib]);
             kci.add_counts_from_file(cidxreads2[lib]);
             kci.compute_compression_stats(lib);
-            kci.dump_histogram(output_prefix+"_" + std::to_string(lib) + ".csv", lib);
+            kci.dump_histogram(output_prefix + "_" + std::to_string(lib) + ".csv", lib);
             std::cout << "Counted reads for lib " << lib << " \n";
             for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++) {
-                auto kci_node = kci.compute_compression_for_node(counter, 10, lib);
-                kci_assembly << kci_node << ", ";
+
+                if (sg.is_canonical_repeat(counter)) {
+                    auto bw = sg.get_bw_links(counter);
+                    auto fw = sg.get_fw_links(counter);
+
+                    for (auto b: bw){
+                        auto kci_node = kci.compute_compression_for_node(b.dest, 10, lib);
+                        kci_assembly << kci_node << ", ";
+                    }
+                    auto kci_node = kci.compute_compression_for_node(counter, 10, lib);
+                    kci_assembly << kci_node << ", ";
+                    for (auto f: fw){
+                        auto kci_node = kci.compute_compression_for_node(f.dest, 10, lib);
+                        kci_assembly << kci_node << ", ";
+                    }
+                    count += 1;
+
+                } else {
+                    kci_assembly << " ,";
+                }
 
             }
             kci_assembly << std::endl;
-        }
 
+            std::cout << "calculated compression for " << lib << " for " << count << std::endl;
+        }
     }
 
 }

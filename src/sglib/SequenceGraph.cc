@@ -89,6 +89,15 @@ void SequenceGraph::remove_link(sgNodeID_t source, sgNodeID_t dest) {
 
 }
 
+//this os how bernardo does it
+bool SequenceGraph::is_canonical_repeat(sgNodeID_t n){
+    if (this->get_fw_links(n).size() == 2 && this->get_bw_links(n).size() ==2){
+
+        return true;
+    }
+    return false;
+}
+
 std::vector<Link> SequenceGraph::get_fw_links( sgNodeID_t n){
     std::vector<Link> r;
     for (auto &l:links[(n>0 ? n : -n)]) if (l.source==-n) r.emplace_back(l);

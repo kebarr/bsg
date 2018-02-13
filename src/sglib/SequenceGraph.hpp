@@ -71,7 +71,7 @@ public:
     void join_all_unitigs();
     std::vector<SequenceGraphPath> get_all_unitigs(uint16_t min_nodes);
     // simplify --> executes expand_path on every multi-sequence unitig
-
+    bool is_canonical_repeat(sgNodeID_t);
 
     // tip_clip -> eliminates tips.
 
