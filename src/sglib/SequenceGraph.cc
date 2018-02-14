@@ -9,29 +9,31 @@
 #include "SequenceGraph.hpp"
 
 bool Node::is_canonical() {
-    for (size_t i=0,j=sequence.size()-1;i<j;++i,--j){
-        char f=sequence[i];
-        char r=sequence[j];
-        switch(r){
-            case 'A':
-                r='T';
-                break;
-            case 'C':
-                r='G';
-                break;
-            case 'G':
-                r='C';
-                break;
-            case 'T':
-                r='A';
-                break;
-            case 'N':
-                break;
-            default:
-            std::cout<<"unexpected character in fasta file: '"<<r<<"'"<<std::endl;
+    if (sequence.size() > 0) {
+        for (size_t i = 0, j = sequence.size() - 1; i < j; ++i, --j) {
+            char f = sequence[i];
+            char r = sequence[j];
+            switch (r) {
+                case 'A':
+                    r = 'T';
+                    break;
+                case 'C':
+                    r = 'G';
+                    break;
+                case 'G':
+                    r = 'C';
+                    break;
+                case 'T':
+                    r = 'A';
+                    break;
+                case 'N':
+                    break;
+                default:
+                    std::cout << "munexpected character in fasta file: '" << r << "'" << std::endl;
+            }
+            if (f < r) return true;
+            if (r < f) return false;
         }
-        if (f<r) return true;
-        if (r<f) return false;
     }
     return true;
 };
