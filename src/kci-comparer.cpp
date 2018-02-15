@@ -151,6 +151,9 @@ int main(int argc, char * argv[]) {
 
 
         std::ofstream kci_assembly(output_prefix + "_kcis.csv");
+
+
+        std::ofstream kci_assembly2(output_prefix + "_kcis_repeats.csv");
         for (size_t counter = 0; counter < sg.nodes.size(); counter++) {
             kci_assembly << sg.oldnames[counter] << ", ";
         }
@@ -173,13 +176,17 @@ int main(int argc, char * argv[]) {
                     for (auto b: bw){
                         auto kci_node = kci.compute_compression_for_node(b.dest, 10, lib);
                         kci_assembly << kci_node << ", ";
+                        kci_assembly2 << b.dest << ": " << kci_node << ", ";
                     }
                     auto kci_node = kci.compute_compression_for_node(counter, 10, lib);
                     kci_assembly << kci_node << ", ";
+                    kci_assembly2 << counter << ": " << kci_node << ", ";
                     for (auto f: fw){
                         auto kci_node = kci.compute_compression_for_node(f.dest, 10, lib);
                         kci_assembly << kci_node << ", ";
+                        kci_assembly2 << f.dest << ": " << kci_node << ", ";
                     }
+                    kci_assembly2 << std::endl;
                     count += 1;
 
                 } else {
