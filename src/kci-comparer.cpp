@@ -167,6 +167,7 @@ int main(int argc, char * argv[]) {
             kci.compute_compression_stats(lib);
             kci.dump_histogram(output_prefix + "_" + std::to_string(lib) + ".csv", lib);
             std::cout << "Counted reads for lib " << lib << " \n";
+            kci_assembly2 << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
             for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++) {
 
                 if (sg.is_canonical_repeat(counter)) {
@@ -176,15 +177,17 @@ int main(int argc, char * argv[]) {
                     for (auto b: bw){
                         auto kci_node = kci.compute_compression_for_node(b.dest, 10, lib);
                         kci_assembly << kci_node << ", ";
-                        kci_assembly2 << b.dest << ": " << kci_node << ", ";
+                        auto ind = b.dest > 0 ? b.dest : -b.dest;
+                        kci_assembly2 << sg.oldnames[ind] << ": " << kci_node << ", " << sg.nodes[ind].sequence.size() << ", ";
                     }
                     auto kci_node = kci.compute_compression_for_node(counter, 10, lib);
                     kci_assembly << kci_node << ", ";
-                    kci_assembly2 << counter << ": " << kci_node << ", ";
+                    kci_assembly2 << sg.oldnames[counter] << ": " << kci_node << ", "<< sg.nodes[counter].sequence.size() << ", ";
                     for (auto f: fw){
                         auto kci_node = kci.compute_compression_for_node(f.dest, 10, lib);
                         kci_assembly << kci_node << ", ";
-                        kci_assembly2 << f.dest << ": " << kci_node << ", ";
+                        auto ind = f.dest > 0? f.dest : -f.dest;
+                        kci_assembly2 << sg.oldnames[ind] << ": " << kci_node << ", " << sg.nodes[ind].sequence.size() << ", ";
                     }
                     kci_assembly2 << std::endl;
                     count += 1;
