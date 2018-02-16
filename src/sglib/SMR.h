@@ -614,7 +614,7 @@ private:
     uint64_t totalFilteredRecords = 0;                  /// Total number of resulting elements after filtering and merging
     const int unsigned maxThreads = 1;
     int mergeCount = 4;                                 /// How many batches to keep rolling before merging
-    const std::string tmpBase;                      /// Directory to store the temporary files
+    const std::string tmpBase = "./tmp/";                      /// Directory to store the temporary files
     std::string tmpInstance;                        /// Directory to store the temporary files for the read_from_file argument
     std::string outdir;                             /// Output directory
 };
