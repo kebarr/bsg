@@ -10,7 +10,9 @@
 #include <string>
 #include <map>
 #include <unordered_map>
-#include "sglib/readers/FileReader.h"
+#include <set>
+#include <iostream>
+#include <array>
 
 typedef int64_t sgNodeID_t; //first node is 1; negatives are RC
 
@@ -34,6 +36,11 @@ public:
     bool operator==( const  Link);
     bool operator<(const Link)const;
 
+    friend std::ostream &operator<<(std::ostream &os, const Link &link) {
+        os << link.source << " -> " << link.dest;
+        return os;
+    }
+
 };
 
 class SequenceGraphPath;
@@ -50,7 +57,7 @@ public:
     void add_link( sgNodeID_t source, sgNodeID_t dest, int32_t d);
 
     std::vector<Link> get_fw_links( sgNodeID_t n);
-    inline std::vector<Link> get_bw_links( sgNodeID_t n){ return get_fw_links (-n); };
+    std::vector<Link> get_bw_links( sgNodeID_t n);
 
     /*
      * Connected components, (TODO) optionally breaking up in repeats, nodes that class as repeats will be returned on their own
@@ -66,7 +73,7 @@ public:
     void remove_link(sgNodeID_t source, sgNodeID_t dest);
     //These two need to mark expanded edges, and transfer read maps and unique kmers for non-expanded, but just read map for expanded.
 
-    void join_path(SequenceGraphPath p, bool consume_nodes=true);
+    void join_path(const SequenceGraphPath p, bool consume_nodes=true);
     // expand_path --> creates an edge with the consensus of a path, eliminates old nodes if only in path and unused edges
     void join_all_unitigs();
     std::vector<SequenceGraphPath> get_all_unitigs(uint16_t min_nodes);
@@ -91,13 +98,23 @@ public:
     std::unordered_map<std::string,sgNodeID_t> oldnames_to_ids;
     std::vector<std::string> oldnames;
     std::string filename,fasta_filename;
+
+    void consume_nodes(const SequenceGraphPath &p, const std::set<sgNodeID_t> &pnodes);
+
+    std::vector<sgNodeID_t > find_canonical_repeats();
+    bool is_loop(std::array<sgNodeID_t, 4> nodes) {
+        for (auto j = 0; j < 3; ++j)
+            for (auto i = j + 1; i < 4; ++i)
+                if (nodes[i] == nodes[j] or nodes[i] == -nodes[j]) return true; //looping node
+        return false;
+    }
 };
 
 
 class SequenceGraphPath {
 public:
     std::vector<sgNodeID_t> nodes;
-    explicit SequenceGraphPath(SequenceGraph & _sg, std::vector<sgNodeID_t> _nodes={})  : sg(_sg) ,nodes(_nodes) {};
+    explicit SequenceGraphPath(SequenceGraph & _sg, const std::vector<sgNodeID_t> _nodes={})  : sg(_sg) ,nodes(_nodes) {};
     std::string get_fasta_header();
     std::string get_sequence();
     void reverse();

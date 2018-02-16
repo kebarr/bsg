@@ -27,14 +27,55 @@
 
 static const std::uint64_t GB(1024*1024*1024);
 
+struct SMRParams {
+    uint64_t getFromEnv() {
+        uint64_t parsed_mem;
+
+        std::string smr_maxmem_env_raw(std::getenv("SMR_BATCH_MEM"));
+        std::transform(smr_maxmem_env_raw.begin(),smr_maxmem_env_raw.end(), smr_maxmem_env_raw.begin(), toupper);
+        auto gb_pos(smr_maxmem_env_raw.find("GB"));
+        auto g_pos(smr_maxmem_env_raw.find('G'));
+        if ( gb_pos != std::string::npos) {
+            parsed_mem = GB*std::atoi(std::string(smr_maxmem_env_raw.begin(), smr_maxmem_env_raw.begin()+gb_pos).c_str());
+        }
+        else if (g_pos != std::string::npos) {
+            parsed_mem = GB*std::atoi(std::string(smr_maxmem_env_raw.begin(), smr_maxmem_env_raw.begin()+g_pos).c_str());
+        }
+        else {
+            if ( std::all_of(smr_maxmem_env_raw.begin(),smr_maxmem_env_raw.end(), ::isdigit) )
+                parsed_mem = GB*std::atoi(smr_maxmem_env_raw.c_str());
+            else
+                parsed_mem = 4 * GB;
+        }
+        return parsed_mem;
+    }
+
+    SMRParams(uint64_t maxMemory = 0, unsigned int min = 0, unsigned int max = std::numeric_limits<unsigned int>::max(),
+                       const std::string &outdir = "./", const std::string &Otmp = "", unsigned int mergeCount = 4) :
+            mergeCount(mergeCount), Otmp(Otmp), maxMem(maxMemory), outdir(outdir), min(min), max(max)
+    {
+        // Max mem is not initialised, take from environment variable
+        if (0 == maxMemory) {
+            maxMem=getFromEnv();
+        }
+    }
+
+    unsigned int mergeCount = 0;
+    uint64_t maxMem = 0;
+    unsigned int min = 0;
+    unsigned int max = std::numeric_limits<unsigned int>::max();
+    const std::string outdir = "./";
+    const std::string Otmp = "";
+};
+
 /**
  * @brief
  * SMR is an external memory map reduce engine with configurable memory bounds
  * it requires a RecordFactory and a FileReader. The FileReader takes elements from the file
  * and sends them to the RecordFactory for parsing into single RecordType elements.
  *
- * Reads the SMR_BATCH_MEM environment variable if the maxMem parameter is not passed to the constructo
- * r
+ * Reads the SMR_BATCH_MEM environment variable if the maxMem parameter is not passed to the constructor
+ *
  * @tparam RecordType
  * The RecordType class requires strict weak ordering and equivalence comparison functions.
  * @tparam RecordFactory
@@ -76,19 +117,17 @@ public:
      * directory to be used for the batch files, each input file will generate a new directory from the basename of the argument
      * passed to the read_from_file function call (read_file). The behaviour is equivalent to that of outdir.
      */
-    SMR(ReaderParamStruct reader_parameters, FactoryParamStruct factory_parameters, uint64_t maxMem, unsigned int min = 0, unsigned int max = std::numeric_limits<unsigned int>::max(),
-        const std::string outdir = "./", const std::string &Otmp = "") : reader_parameters(reader_parameters),
-                                                                         factory_parameters(factory_parameters),
-                                                                         myBatches(0),
-                                                                         totalFilteredRecords(0),
-                                                                         totalRecordsGenerated(0), tmpBase(Otmp),
-                                                                         outdir(outdir), minCount(min), maxCount(max),
-                                                                         mergeCount(4), maxThreads((unsigned int) 1) {
+    SMR(ReaderParamStruct reader_parameters, FactoryParamStruct factory_parameters, SMRParams smr_params) : reader_parameters(reader_parameters),
+                                                                        factory_parameters(factory_parameters),
+                                                                        totalRecordsGenerated(0),
+                                                                        tmpBase(smr_params.Otmp), outdir(smr_params.outdir), minCount(smr_params.min),
+                                                                        maxCount(smr_params.max), mergeCount(smr_params.mergeCount),
+                                                                        maxThreads((unsigned int) 1) {
         this->outdir = std::string(outdir+"smr_files/");
         sglib::check_or_create_directory(this->outdir);
-        numElementsPerBatch = (maxMem / sizeof(RecordType) / maxThreads);
+        numElementsPerBatch = (smr_params.maxMem / sizeof(RecordType) / maxThreads);
         sglib::OutputLog(sglib::DEBUG)<<"SMR created with elements of size "<<sizeof(RecordType)<<" using "<<maxThreads<<" threads and "
-                                      <<maxMem<<" Bytes of memory -> batches of "<<numElementsPerBatch<<" elements"<<std::endl;
+                 <<smr_params.maxMem<<" Bytes of memory -> batches of "<<numElementsPerBatch<<" elements"<<std::endl;
 
     }
 
@@ -141,7 +180,7 @@ public:
      * Filtered vector of RecordType elements
      */
     std::vector<RecordType> process_from_memory() {
-        tmpInstance = sglib::create_temp_directory(tmpBase);
+        tmpInstance = sglib::create_temp_directory(tmpBase) + "/";
 
         uint64_t numFileRecords(0);
 
@@ -159,9 +198,10 @@ public:
         end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed_seconds = end - start;
         sglib::OutputLog(sglib::DEBUG) << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
-        sglib::remove_directory(tmpInstance);
         //TODO: remove instance / never create the final files?
-        return getRecords();
+        std::vector<RecordType> result(getRecords());
+        sglib::remove_directory(tmpInstance);
+        return result;
     };
 
     /**
@@ -528,22 +568,16 @@ private:
 
     std::vector<RecordType> readFinalkc(std::string finalFile) {
         std::ifstream outf(finalFile, std::ios_base::binary);
-
-        outf.unsetf(std::ios::skipws);
-
-        std::streampos fileSize;
-        outf.seekg(0, std::ios::end);
-        fileSize = outf.tellg();
-        outf.seekg(sizeof(uint64_t), std::ios::beg);
+        uint64_t numElements;
+        outf.read(reinterpret_cast<char *>(&numElements), sizeof(numElements));
         // reserve capacity
         std::vector<RecordType> vec;
-        vec.reserve(fileSize);
+        vec.reserve(numElements);
 
         // read the data:
         vec.insert(vec.begin(), std::istream_iterator<RecordType>(outf), std::istream_iterator<RecordType>());
 
         return vec;
-
     }
     /**
      * @brief
@@ -576,10 +610,10 @@ private:
     ReaderStats readerStatistics;
 
     std::atomic<uint64_t> totalRecordsGenerated;    /// Total number of records
-    uint64_t totalFilteredRecords;                  /// Total number of resulting elements after filtering and merging
-    const int unsigned maxThreads;
-    int mergeCount;                                 /// How many batches to keep rolling before merging
-    std::string tmpBase;                            /// Directory to store the temporary files
+    uint64_t totalFilteredRecords = 0;                  /// Total number of resulting elements after filtering and merging
+    const int unsigned maxThreads = 1;
+    int mergeCount = 4;                                 /// How many batches to keep rolling before merging
+    const std::string tmpBase;                      /// Directory to store the temporary files
     std::string tmpInstance;                        /// Directory to store the temporary files for the read_from_file argument
     std::string outdir;                             /// Output directory
 };

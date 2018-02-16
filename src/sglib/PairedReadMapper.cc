@@ -1,11 +1,12 @@
 //
 // Created by Bernardo Clavijo (EI) on 03/11/2017.
 //
+
 #include <iostream>
 #include <iomanip>
 #include <cassert>
 #include <atomic>
-#include "PairedReadMapper.hpp"
+#include "PairedReadMapper.h"
 
 template<typename FileRecord>
 class FastqReaderFAST {
@@ -97,6 +98,122 @@ private:
     bool eof_flag;
 };
 
+/**
+ * @brief
+ * Map long reads as tagged reads, use same tag per read.
+ *
+ * Requires: min_matches >= 2.
+ * @param k
+ * @param min_matches
+ * @param kmer_to_graphposition
+ * @param filename
+ * @param offset
+ * @return
+ */
+uint64_t PairedReadMapper::process_longreads_from_file(uint8_t k, const uint16_t min_matches, std::unordered_map<uint64_t , graphPosition> & kmer_to_graphposition, std::string filename, uint64_t offset) {
+    if (min_matches < 2 ) {
+        throw std::invalid_argument("min_matches < 2, long reads can only be considered mapped if > 2 kmers are shared between read and sequence");
+    }
+    /*
+     * LongRead mapping in parallel
+     */
+    FastqReader<FastqRecord> fastqReader({0},filename);
+    std::atomic<uint64_t> mapped_count(1);
+    std::atomic<uint64_t> total_count(0);
+#pragma omp parallel shared(fastqReader)
+    {
+        FastqRecord read;
+        std::vector<KmerIDX> readkmers;
+        kmerIDXFactory<FastqRecord> kf({k});
+        ReadMapping mapping;
+        bool c ;
+#pragma omp critical(lr_fastq_reader)
+        {
+            c = fastqReader.next_record(read);
+        }
+        while (c) {
+            mapping.read_id = (read.id) * 2 + offset;
+            //this enables partial read re-mapping by setting read_to_node to 0
+            if (read_to_node.size()<=mapping.read_id or 0==read_to_node[mapping.read_id]) {
+                mapping.node = 0;
+                mapping.unique_matches = 0;
+                mapping.first_pos = 0;
+                mapping.last_pos = 0;
+                mapping.rev = false;
+                mapping.unique_matches = 0;
+                //get all kmers from read
+                readkmers.clear();
+
+                kf.setFileRecord(read);
+                kf.next_element(readkmers);
+
+                // For each kmer on read
+                std::vector<ReadMapping> read_mappings;
+                for (auto &rk:readkmers) {
+                    auto nk = kmer_to_graphposition.find(rk.kmer);
+                    // If kmer exists on graph
+                    if (kmer_to_graphposition.end() != nk) {
+                        // If first match
+                        if (mapping.node == 0) {
+                            mapping.node = nk->second.node;
+                            if ((nk->second.node > 0 and rk.contigID > 0) or
+                                (nk->second.node < 0 and rk.contigID < 0))
+                                mapping.rev = false;
+                            else mapping.rev = true;
+                            mapping.first_pos = nk->second.pos;
+                            mapping.last_pos = nk->second.pos;
+                            mapping.unique_matches = 1;
+                        }// If not first match
+                        else {
+                            // If node is different, end match... Start new one
+                            if (mapping.node != nk->second.node) {
+                                read_mappings.push_back(mapping);
+                                mapping.node = nk->second.node;
+                                mapping.first_pos = nk->second.pos;
+                                mapping.last_pos = nk->second.pos;
+                                mapping.unique_matches=1;
+                            } else {
+                                mapping.unique_matches++;
+                                mapping.last_pos = nk->second.pos;
+                            }
+                        }
+                    }
+                }
+                // TODO : Check if this last push_back is required
+                if (mapping.node != 0) read_mappings.push_back(mapping);
+
+                for (auto &rm:read_mappings)
+                    if (rm.node != 0 and rm.unique_matches >= min_matches) {
+#pragma omp critical(lr_reads_in_node)
+                        {
+                            rm.read_id=mapped_count;
+                            reads_in_node[std::abs(rm.node)].push_back(rm);
+                        }
+                        mapped_count+=2;
+#pragma omp critical (lr_read_to_tag)
+                        {
+                            if (read_to_tag.size() <= rm.read_id) read_to_tag.resize(rm.read_id + 100000,0);
+                            read_to_tag[rm.read_id] = read.id;
+                        }
+                    }
+            }
+            auto tc = ++total_count;
+            if (tc % 100000 == 0) std::cout << mapped_count << " / " << tc << std::endl;
+#pragma omp critical(lr_fastq_reader)
+            {
+                c = fastqReader.next_record(read);
+            }
+        }
+
+    }
+    std::cout<<"Reads mapped: "<<mapped_count<<" / "<<total_count<<std::endl;
+    read_to_tag.resize(total_count);
+#pragma omp parallel for
+    for (sgNodeID_t n=1;n<reads_in_node.size();++n){
+        std::sort(reads_in_node[n].begin(),reads_in_node[n].end());
+    }
+    return mapped_count;
+}
 
 
 uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_matches, std::unordered_map<uint64_t , graphPosition> & kmer_to_graphposition, std::string filename, uint64_t offset , bool is_tagged, std::unordered_set<uint64_t> const & reads_to_remap) {
@@ -107,7 +224,7 @@ uint64_t PairedReadMapper::process_reads_from_file(uint8_t k, uint16_t min_match
      */
     FastqReaderFAST<FastqRecord> fastqReader({0},filename);
     std::atomic<uint64_t> mapped_count(0),total_count(0);
-#pragma omp parallel shared(fastqReader)// this lione has out of bounds error on my weird read file AND  ‘PairedReadMapper::reads_in_node’ is not a variable in clause ‘shared’ when compiling on
+#pragma omp parallel shared(fastqReader)// this line has out of bounds error on my weird read file AND  ‘PairedReadMapper::reads_in_node’ is not a variable in clause ‘shared’ when compiling on
     {
         FastqRecord read;
         std::vector<KmerIDX> readkmers;
@@ -243,6 +360,14 @@ void PairedReadMapper::map_reads(std::string filename1, std::string filename2, p
     remap_reads();
 }
 
+void PairedReadMapper:: map_reads(std::string long_reads, uint64_t max_mem) {
+    read1filename = long_reads;
+    read2filename = long_reads;
+    readType = prmReadType::prmLR;
+    memlimit = max_mem;
+    remap_reads();
+}
+
 void PairedReadMapper::remove_obsolete_mappings(){
     uint64_t nodes=0,reads=0;
     std::set<sgNodeID_t> updated_nodes;
@@ -276,13 +401,13 @@ void PairedReadMapper::remap_reads(std::unordered_set<uint64_t> const & reads_to
 
     const int k = 31;
     const int max_coverage = 1;
-    const int min_matches = 1;
+    uint16_t min_matches = 1;
     const std::string output_prefix("./");
     SMR<KmerIDX,
             kmerIDXFactory<FastaRecord>,
             GraphNodeReader<FastaRecord>,
-            FastaRecord, GraphNodeReaderParams, KMerIDXFactoryParams> kmerIDX_SMR({1, sg}, {k}, memlimit, 0, max_coverage,
-                                                                                  output_prefix);
+            FastaRecord, GraphNodeReaderParams, KMerIDXFactoryParams> kmerIDX_SMR({1, sg}, {k}, {memlimit, 0, max_coverage,
+                                                                                  output_prefix});
 
    // Get the unique_kmers from the graph into a map
     std::cout << "Indexing graph... " << std::endl;
@@ -316,6 +441,13 @@ void PairedReadMapper::remap_reads(std::unordered_set<uint64_t> const & reads_to
                 read_to_node[mr.read_id] = mr.node;
 
             }
+    } else if (readType == prmLR) {
+        min_matches = 4;
+        auto lrc = process_longreads_from_file(k, min_matches, kmer_to_graphposition, read1filename, 1);
+        read_to_node.resize(lrc*2+1,0);
+        for (const auto &rin:reads_in_node)
+            for (const auto &mr:rin)
+                read_to_node[mr.read_id] = mr.node;
     }
 }
 

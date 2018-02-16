@@ -4,7 +4,8 @@
 
 
 #include "KmerCompressionIndex.hpp"
-
+#include <atomic>
+#include <sglib/readers/FileReader.h>
 
 
 KmerCompressionIndex::KmerCompressionIndex(SequenceGraph &_sg, uint64_t _max_mem): sg(_sg) {
@@ -18,8 +19,8 @@ void KmerCompressionIndex::index_graph(){
     SMR<KmerCount,
     KmerCountFactory<FastaRecord>,
     GraphNodeReader<FastaRecord>,
-    FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, max_mem, 0, max_coverage,
-                                                                          output_prefix);
+    FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, {max_mem, 0, max_coverage,
+                                                                          output_prefix});
 
 
 
@@ -41,8 +42,8 @@ void KmerCompressionIndex::reindex_graph(){
     SMR<KmerCount,
     KmerCountFactory<FastaRecord>,
     GraphNodeReader<FastaRecord>,
-    FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, max_mem, 0, max_coverage,
-                                                                              output_prefix);
+    FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, {max_mem, 0, max_coverage,
+                                                                              output_prefix});
 
 
 
