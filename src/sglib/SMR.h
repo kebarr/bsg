@@ -65,7 +65,7 @@ struct SMRParams {
     unsigned int min = 0;
     unsigned int max = std::numeric_limits<unsigned int>::max();
     const std::string outdir = "./";
-    const std::string Otmp = "";
+    const std::string Otmp = "./tmp";
 };
 
 /**
