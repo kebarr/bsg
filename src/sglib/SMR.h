@@ -180,6 +180,7 @@ public:
      * Filtered vector of RecordType elements
      */
     std::vector<RecordType> process_from_memory() {
+        std::cout << "Creating dir: " << tmpBase << std::endl;
         tmpInstance = sglib::create_temp_directory(tmpBase) + "/";
 
         uint64_t numFileRecords(0);
