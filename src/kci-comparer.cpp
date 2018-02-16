@@ -173,7 +173,7 @@ int main(int argc, char * argv[]) {
                 if (sg.is_canonical_repeat(counter)) {
                     auto bw = sg.get_bw_links(counter);
                     auto fw = sg.get_fw_links(counter);
-
+                    // percent present/absent doesn't do it - or not obviously
                     for (auto b: bw){
                         auto kci_node = kci.compute_compression_for_node(b.dest, 10, lib);
                         kci_assembly << kci_node << ", ";

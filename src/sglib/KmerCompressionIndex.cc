@@ -116,7 +116,8 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
     std::atomic<uint64_t> present(0), absent(0), rp(0);
     std::unordered_map<uint64_t,uint64_t> kmer_map;
     for (uint64_t i=0;i<graph_kmers.size();++i) kmer_map[graph_kmers[i].kmer]=i;
-
+    size_t  sum = 0;
+    size_t  kmers_in_reads = 0;
 #pragma omp parallel shared(fastqReader)
     {
         std::vector<uint16_t> thread_counts(read_counts.back().size(),0);
@@ -159,10 +160,17 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
         //Update shared counts
 #pragma omp critical(countupdate)
         {
-            for (uint64_t i=0;i<read_counts.back().size();++i) read_counts.back()[i]+=thread_counts[i];
+
+            for (uint64_t i=0;i<read_counts.back().size();++i) {
+                read_counts.back()[i]+=thread_counts[i];
+                sum += thread_counts[i];
+                if (thread_counts[i] != 0){
+                    kmers_in_reads += 1;
+                }
+            }
         }
     }
-    std::cout << rp << " reads processed "<< present <<" / " << present+absent << " kmers found" << std::endl;
+    std::cout << rp << " reads processed "<< present <<" / " << present+absent << " kmers found, mean kmers in reads: " << sum/kmers_in_reads<< std::endl;
 }
 
 
@@ -222,9 +230,9 @@ double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint
     for (auto &kmer : nkmers){
         // find kmer in graph kmer with count > 0?
         auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
-        if (nk!=graph_kmers.end() and nk->kmer == kmer and nk->count==1) {
+        if (nk!=graph_kmers.end() and nk->kmer == kmer and nk-> count > 0) {
             counter +=1;
-            ++kcount;// inrement number of (unique?? ) kmers on node
+            ++kcount;// inrement number of (unique??- now removed count = 1 ) kmers on node
             kcov+=read_counts[dataset][nk-graph_kmers.begin()]; // inrement coverage by count for this kmer in read set
         }
 
