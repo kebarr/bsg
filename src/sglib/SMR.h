@@ -140,8 +140,7 @@ public:
      * @return
      * Filtered vector of RecordType elements
      */
-    std::vector<RecordType> read_from_file(const std::string &read_file) {
-        std::string readFileBasename(read_file.substr(0,read_file.find_last_of('.')).substr(read_file.find_last_of('/')+1));
+    std::vector<RecordType> read_from_file(const std::string &read_file) { std::string readFileBasename(read_file.substr(0,read_file.find_last_of('.')).substr(read_file.find_last_of('/')+1));
         std::string finalFilePath(outdir+readFileBasename);
         tmpInstance = tmpBase+readFileBasename;
         sglib::check_or_create_directory(finalFilePath);
@@ -149,7 +148,7 @@ public:
         tmpInstance = sglib::create_temp_directory(tmpBase);
         std::ifstream final_file(finalFilePath+"final.kc");
         if (final_file.is_open()){
-            sglib::OutputLog(sglib::DEBUG) << "Using precomputed sum file at " << outdir << "final.kc" << std::endl;
+            std::cout << "Using precomputed sum file at " << outdir << "final.kc" << std::endl;
             return readFinalkc(outdir+"final.kc");
         } else {
             uint64_t numFileRecords(0);
@@ -157,16 +156,16 @@ public:
             std::chrono::time_point<std::chrono::system_clock> start, end;
             start = std::chrono::system_clock::now();
 
-            sglib::OutputLog(sglib::DEBUG) << "Reading file: " << read_file << std::endl;
+            std::cout <<  "Reading file: " << read_file << std::endl;
             FileReader myFileReader(reader_parameters, read_file);
-            sglib::OutputLog(sglib::DEBUG) << "Begin reduction using " << numElementsPerBatch << " elements per batch (" << ceil(uint64_t((numElementsPerBatch*sizeof(RecordType)*maxThreads)) / (1.0f*1024*1024*1024)) << "GB)" << std::endl;
+            std::cout << "Begin reduction using " << numElementsPerBatch << " elements per batch (" << ceil(uint64_t((numElementsPerBatch*sizeof(RecordType)*maxThreads)) / (1.0f*1024*1024*1024)) << "GB)" << std::endl;
             mapElementsToBatches(myFileReader, numFileRecords);
 
             readerStatistics = myFileReader.getSummaryStatistics();
 
             end = std::chrono::system_clock::now();
             std::chrono::duration<double> elapsed_seconds = end - start;
-            sglib::OutputLog(sglib::DEBUG) << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
+            std::cout << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
             sglib::remove_directory(tmpInstance);
             return getRecords();
         }
@@ -188,9 +187,9 @@ public:
         std::chrono::time_point<std::chrono::system_clock> start, end;
         start = std::chrono::system_clock::now();
 
-        sglib::OutputLog(sglib::DEBUG) << "Reading From memory"<< std::endl;
+        std::cout << "Reading From memory"<< std::endl;
         FileReader myFileReader(reader_parameters);
-        sglib::OutputLog(sglib::DEBUG) << "Begin reduction using " << numElementsPerBatch << " elements per batch (" << ceil(uint64_t((numElementsPerBatch*sizeof(RecordType)*maxThreads)) / (1.0f*1024*1024*1024)) << "GB)" << std::endl;
+        std::cout << "Begin reduction using " << numElementsPerBatch << " elements per batch (" << ceil(uint64_t((numElementsPerBatch*sizeof(RecordType)*maxThreads)) / (1.0f*1024*1024*1024)) << "GB)" << std::endl;
         mapElementsToBatches(myFileReader, numFileRecords);
 
         readerStatistics = myFileReader.getSummaryStatistics();
@@ -198,7 +197,7 @@ public:
 
         end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed_seconds = end - start;
-        sglib::OutputLog(sglib::DEBUG) << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
+        std::cout << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
         //TODO: remove instance / never create the final files?
         std::vector<RecordType> result(getRecords());
         sglib::remove_directory(tmpInstance);
@@ -233,6 +232,7 @@ private:
      */
     uint64_t merge(const std::string &tmpName, const std::vector<std::string> &files, std::vector<RecordType> &elements) {
         auto files_size(files.size());
+     std::cout << "k: " << this->factory_parameters.k << std::endl;
         auto numMemoryElements(elements.size());
         uint64_t memoryElement(0);
         std::vector<int> in_fds(files_size );
@@ -298,6 +298,7 @@ private:
                     }
                 }
                 if (count_element_from_file[i] < size_element_from_file[i]) {
+                    // hre:
                     if (!(next_element_from_file[i][count_element_from_file[i]] > min_element)){
                         active=true;
                         min_element = next_element_from_file[i][count_element_from_file[i]];
