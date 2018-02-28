@@ -69,9 +69,10 @@ void output_kci_for_read_set(SequenceGraph &sg, KmerCompressionIndex & kci, std:
 
 int main(int argc, char * argv[]) {
 
+    sglib::OutputLogLevel = sglib::DEBUG;
     std::cout << "Welcome to kci-comparer"<<std::endl<<std::endl;
-    std::cout << "Git origin: " << GIT_ORIGIN_URL << " -> "  << GIT_BRANCH << std::endl;
-    std::cout << "Git commit: " << GIT_COMMIT_HASH << std::endl<<std::endl;
+    //std::cout << "Git origin: " << GIT_ORIGIN_URL << " -> "  << GIT_BRANCH << std::endl;
+    //std::cout << "Git commit: " << GIT_COMMIT_HASH << std::endl<<std::endl;
 
     std::string gfa_filename,output_prefix, load_cidx, dump_cidx, gfa_list, assembly_list;
     std::vector<std::string> reads1,reads2,reads_type, dump_mapped, load_mapped,cidxreads1,cidxreads2;
