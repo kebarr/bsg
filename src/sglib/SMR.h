@@ -23,6 +23,7 @@
 #include <cmath>
 #include "sglib/logger/OutputLog.h"
 #include <sglib/filesystem/check_or_create_directory.h>
+#include <sglib/readers/Common.h>
 
 
 static const std::uint64_t GB(1024*1024*1024);
@@ -137,18 +138,22 @@ public:
      * Removes the tmp directory used for the external memory reduction.
      * @param read_file
      * Path to the file to be read
+     * @param do_work
+     * If false, the SMR will try first to load the precomputed file from disk.
      * @return
      * Filtered vector of RecordType elements
      */
-    std::vector<RecordType> read_from_file(const std::string &read_file) { std::string readFileBasename(read_file.substr(0,read_file.find_last_of('.')).substr(read_file.find_last_of('/')+1));
+    std::vector<RecordType> read_from_file(const std::string &read_file, const bool do_work=true) {
+        std::string readFileBasename(read_file.substr(0,read_file.find_last_of('.')).substr(read_file.find_last_of('/')+1));
         std::string finalFilePath(outdir+readFileBasename);
         tmpInstance = tmpBase+readFileBasename;
         sglib::check_or_create_directory(finalFilePath);
         outdir = finalFilePath;
         tmpInstance = sglib::create_temp_directory(tmpBase);
         std::ifstream final_file(finalFilePath+"final.kc");
-        if (final_file.is_open()){
-            std::cout << "Using precomputed sum file at " << outdir << "final.kc" << std::endl;
+
+        if (final_file.is_open() and !do_work){
+            sglib::OutputLog(sglib::DEBUG) << "Using precomputed sum file at " << outdir << "final.kc" << std::endl;
             return readFinalkc(outdir+"final.kc");
         } else {
             uint64_t numFileRecords(0);
@@ -178,33 +183,37 @@ public:
      * @return
      * Filtered vector of RecordType elements
      */
-    std::vector<RecordType> process_from_memory() {
-        std::cout << "Creating dir: " << tmpBase << std::endl;
-        tmpInstance =  "./tmpdir/";
-       std::cout << "tmpdur " << tmpInstance << std::endl;
-        uint64_t numFileRecords(1);
 
-      std::cout << "2"<< std::endl;
-       std::chrono::time_point<std::chrono::system_clock> start, end;
-        
-  std::cout << "3" << std::endl;
-//start = std::chrono::system_clock::now();
+    std::vector<RecordType> process_from_memory(const bool do_work = true) {
+        tmpInstance = sglib::create_temp_directory(tmpBase) + "/";
+        std::ifstream final_file(outdir+"final.kc");
+        if (final_file.is_open() and !do_work) {
+            sglib::OutputLog(sglib::DEBUG) << "Using precomputed sum file at " << outdir << "final.kc" << std::endl;
+            return readFinalkc(outdir + "final.kc");
+        } else {
+            uint64_t numFileRecords(0);
 
-        std::cout << "Reading From memory"<< std::endl;
-        FileReader myFileReader(reader_parameters);
-        std::cout << "Begin reduction using " << numElementsPerBatch << " elements per batch (" << ceil(uint64_t((numElementsPerBatch*sizeof(RecordType)*maxThreads)) / (1.0f*1024*1024*1024)) << "GB)" << std::endl;
-        mapElementsToBatches(myFileReader, numFileRecords);
+            std::chrono::time_point<std::chrono::system_clock> start, end;
+            start = std::chrono::system_clock::now();
 
-        readerStatistics = myFileReader.getSummaryStatistics();
+            sglib::OutputLog(sglib::DEBUG) << "Reading From memory" << std::endl;
+            FileReader myFileReader(reader_parameters);
+            sglib::OutputLog(sglib::DEBUG) << "Begin reduction using " << numElementsPerBatch << " elements per batch ("
+                                           << ceil(uint64_t((numElementsPerBatch * sizeof(RecordType) * maxThreads)) /
+                                                   (1.0f * 1024 * 1024 * 1024)) << "GB)" << std::endl;
+            mapElementsToBatches(myFileReader, numFileRecords);
+
+            readerStatistics = myFileReader.getSummaryStatistics();
 
 
-        end = std::chrono::system_clock::now();
-        std::chrono::duration<double> elapsed_seconds = end - start;
-        std::cout << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
-        //TODO: remove instance / never create the final files?
-        std::vector<RecordType> result(getRecords());
-        sglib::remove_directory(tmpInstance);
-        return result;
+            end = std::chrono::system_clock::now();
+            std::chrono::duration<double> elapsed_seconds = end - start;
+            sglib::OutputLog(sglib::DEBUG) << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
+            //TODO: remove instance / never create the final files?
+            std::vector<RecordType> result(getRecords());
+            sglib::remove_directory(tmpInstance);
+            return result;
+        }
     };
 
     /**

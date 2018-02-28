@@ -200,6 +200,7 @@ void KmerCompressionIndex::compute_compression_stats(size_t lib) {
     if (median<.9*mode or median>.9*mode ) std::cout<<"WARNING -> median and mode highly divergent"<<std::endl;
     uniq_mode=mode != 0 ? mode:1;// this was usually 0... makes no sense to have a kmer that appears 0 times!!
 
+
 }
 
 void KmerCompressionIndex::dump_histogram(std::string filename, uint16_t dataset) {
@@ -240,4 +241,5 @@ double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint
     }
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
     return (((double) kcount) )/nkmers.size();
+
 }

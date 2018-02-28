@@ -9,6 +9,9 @@
 #include <set>
 #include "SequenceGraph.h"
 #include <sglib/mappers/LinkedReadMapper.hpp>
+#include <list>
+#include <queue>
+#include <stack>
 #include "sglib/readers/FileReader.h"
 
 bool Node::is_canonical() {
@@ -661,4 +664,51 @@ std::vector<sgNodeID_t > SequenceGraph::find_canonical_repeats() {
     std::cout << "Trivially solvable canonical repeats:                         " << solvable << "/" << checked << std::endl;
 
     return repeaty_nodes;
+}
+
+std::vector<sgNodeID_t>
+SequenceGraph::breath_first_search(std::vector<sgNodeID_t> &nodes, unsigned int size_limit) {
+    std::queue<sgNodeID_t> to_visit(std::deque<sgNodeID_t>(nodes.begin(),nodes.end()));
+    std::set<sgNodeID_t> visited;
+    std::unordered_map<sgNodeID_t, sgNodeID_t > meta;
+
+    while (!to_visit.empty() and visited.size() < size_limit) {
+        const auto activeNode(to_visit.front());
+        to_visit.pop();
+        for (const auto &neighboor: get_fw_links(activeNode)) {
+            if (visited.find(neighboor.dest) == visited.end()) {
+                to_visit.push(neighboor.dest);
+                visited.insert(neighboor.dest);
+            }
+        }
+    }
+    return std::vector<sgNodeID_t>(visited.begin(), visited.end());
+}
+
+std::vector<sgNodeID_t>
+SequenceGraph::depth_first_search(const sgNodeID_t seed, unsigned int size_limit, unsigned int edge_limit, std::set<sgNodeID_t> tabu) {
+    // Create a stack with the nodes and the path length
+    struct visitor {
+        sgNodeID_t node;
+        uint dist;
+        uint path_length;
+        visitor(sgNodeID_t n, uint d, uint p) : node(n), dist(d), path_length(p) {}
+    };
+    std::stack<visitor> to_visit;
+    to_visit.emplace(seed,0,0);
+    std::set<sgNodeID_t > visited(tabu);
+    while (!to_visit.empty()) {
+        const auto activeNode(to_visit.top());
+        to_visit.pop();
+        if (visited.find(activeNode.node) == visited.end() and
+                (activeNode.path_length < edge_limit or edge_limit==0) and
+                (activeNode.dist < size_limit or size_limit==0) )
+        {
+            visited.emplace(activeNode.node);
+            for (const auto &l: get_fw_links(activeNode.node)) {
+                to_visit.emplace(l.dest,activeNode.dist+nodes[l.dest>0?l.dest:-l.dest].sequence.length(),activeNode.path_length+1);
+            }
+        }
+    }
+    return std::vector<sgNodeID_t>(visited.begin(), visited.end());
 }

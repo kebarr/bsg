@@ -1,35 +1,19 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.0)
 
 if (POLICY CMP0048)
     cmake_policy(SET CMP0048 NEW)
 endif (POLICY CMP0048)
-
-IF (MY_COMPILER_OPTION STREQUAL "Intel")
-    FIND_PROGRAM(ICPC_PROGRAM icpc ...)
-    IF(ICPC_PROGRAM)
-        MESSAGE(STATUS "** Compiling with Intel settings **")
-        IF(ENV{CXX})
-            MESSAGE(WARNING "Overwriting CXX envvar")
-        ENDIF()
-        SET(ENV{CXX} "${ICPC_PROGRAM}")
-        SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -w")
-        SET(CMAKE_CXX_FLAGS_DEBUG "-g")
-    ELSE()
-        MESSAGE(FATAL_ERROR "Intel compiler not found")
-    ENDIF()
-ENDIF ()
 
 if (APPLE)
        set(CMAKE_MACOSX_RPATH ON)
 endif (APPLE)
 
 
-project (bsg)
+PROJECT (bsg)
 ENABLE_TESTING()
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 OPTION(BUILD_TESTING "Build tests." ON)
-
-execute_process(COMMAND find ./ -type f -name "*.gcda" -exec rm -rf {} \;)
+OPTION(BUILD_DOC "Build documentation" OFF)
+OPTION(BUILD_COV "Build coverage" OFF)
 
 # Get the remote url
 execute_process(
@@ -93,46 +77,48 @@ find_package(ZLIB REQUIRED)
 if (ZLIB_FOUND)
     add_definitions(-DHAVE_ZLIB)
     include_directories(${ZLIB_INCLUDE_DIRS})
+    set(DEPENDENCY_LIBS ${DEPENDENCY_LIBS} ${ZLIB_LIBRARIES})
 endif()
 
-find_package(BZip2 REQUIRED)
+find_package(BZip2)
 if (BZIP2_FOUND)
     add_definitions(-DHAVE_BZIP2)
     include_directories(${BZIP2_INCLUDE_DIRS})
+    set(DEPENDENCY_LIBS ${DEPENDENCY_LIBS} ${BZIP2_LIBRARIES})
 endif()
 
-# first we can indicate the documentation build as an option and set it to ON by default
-option(BUILD_DOC "Build documentation" ON)
-
 # check if Doxygen is installed
-find_package(Doxygen)
-if (DOXYGEN_FOUND)
-    # set input and output files
-    set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
-    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
+IF(BUILD_DOC)
+    find_package(Doxygen)
+    if (DOXYGEN_FOUND)
+        # set input and output files
+        set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/doc/Doxyfile.in)
+        set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
 
-    # request to configure the file
-    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
-    message("Doxygen build started")
+        # request to configure the file
+        configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+        message("Doxygen build started")
 
-    # note the option ALL which allows to build the docs together with the application
-    add_custom_target(doc_doxygen ALL
-                      COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
-                      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                      COMMENT "Generating API documentation with Doxygen"
-                      VERBATIM)
-else (DOXYGEN_FOUND)
-    message("Doxygen need to be installed to generate the doxygen documentation")
-endif (DOXYGEN_FOUND)
+        # note the option ALL which allows to build the docs together with the application
+        add_custom_target(doc_doxygen ALL
+                          COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
+                          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                          COMMENT "Generating API documentation with Doxygen"
+                          VERBATIM)
+    else (DOXYGEN_FOUND)
+        message("Doxygen need to be installed to generate the doxygen documentation")
+    endif (DOXYGEN_FOUND)
+ENDIF()
 
-add_subdirectory("tests/googletest")
+if(BUILD_TESTING)
+    add_subdirectory("tests/googletest")
+    include_directories("tests/googletest/googletest/include/")
+    include_directories("tests/googletest/googletest/src/")
+ENDIF()
 ## Include directories
-include_directories("tests/googletest/googletest/include/")
-include_directories("tests/googletest/googletest/src/")
 include_directories("src/")
 include_directories("deps/cxxopts/include")
 include_directories("deps/kseqcpp/")
-
 ## Set sources variables
 
 ## Libraries
@@ -165,13 +151,15 @@ add_library(sequence_graph SHARED
             src/sglib/logger/OutputLog.cc
             )
 
-target_link_libraries(sequence_graph ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES})
+target_link_libraries(sequence_graph ${DEPENDENCY_LIBS})
 
-set_target_properties(sequence_graph PROPERTIES
+if (BUILD_COV)
+    set_target_properties(sequence_graph PROPERTIES
                       COMPILE_FLAGS "-ftest-coverage -fprofile-arcs"
                       LINK_FLAGS    "--coverage")
+endif()
 
-target_link_libraries(sequence_graph ${ZLIB_LIBRARIES} ${BZIP2_LIBRARIES})
+target_link_libraries(sequence_graph ${DEPENDENCY_LIBS})
 
 install(TARGETS sequence_graph DESTINATION lib)
 install(FILES
@@ -227,11 +215,12 @@ add_executable(seq-sorter
 add_executable(kci-comparer
         src/kci-comparer.cpp)
 
-add_executable(repeat_resolver
-               src/repeat_resolver.cc)
 
 add_executable(map-lr
                src/map-lr.cc)
+
+add_executable(gfa-extract
+        src/gfa-extract.cc)
 
 target_link_libraries(gfa-dumppath sequence_graph)
 target_link_libraries(gfa-qc sequence_graph)
@@ -241,15 +230,16 @@ target_link_libraries(gfa-bfphaser sequence_graph ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(gfa-align sequence_graph ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries (kci-comparer sequence_graph ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(phaser sequence_graph ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(repeat_resolver sequence_graph ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(map-lr sequence_graph ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(gfa-extract sequence_graph)
 
 IF(BUILD_TESTING)
     add_executable(runBasicTests tests/sglib/basic_check.cc)
-    set_target_properties(runBasicTests PROPERTIES
+    IF(BUILD_COV)
+        set_target_properties(runBasicTests PROPERTIES
                           COMPILE_FLAGS "-g -O0 -ftest-coverage -fprofile-arcs"
                           LINK_FLAGS    "--coverage")
-
+    ENDIF()
     target_link_libraries(runBasicTests gtest gtest_main sequence_graph)
     add_test(basicTests runBasicTests)
 ENDIF()
@@ -260,7 +250,6 @@ install(TARGETS
         seq-sorter
         gfa-pairscaff
         gfa-align
-        repeat_resolver
         phaser
         map-lr
         runBasicTests
