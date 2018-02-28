@@ -69,7 +69,6 @@ void output_kci_for_read_set(SequenceGraph &sg, KmerCompressionIndex & kci, std:
 
 int main(int argc, char * argv[]) {
 
-    sglib::OutputLogLevel = sglib::DEBUG;
     std::cout << "Welcome to kci-comparer"<<std::endl<<std::endl;
     sglib::OutputLogLevel = sglib::DEBUG;
     //std::cout << "Git origin: " << GIT_ORIGIN_URL << " -> "  << GIT_BRANCH << std::endl;

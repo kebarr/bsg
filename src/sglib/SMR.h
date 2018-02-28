@@ -52,7 +52,7 @@ struct SMRParams {
     }
 
     SMRParams(uint64_t maxMemory = 0, unsigned int min = 0, unsigned int max = std::numeric_limits<unsigned int>::max(),
-                       const std::string &outdir = "./", const std::string &Otmp = "", unsigned int mergeCount = 4) :
+              const std::string &outdir = "./", const std::string &Otmp = "", unsigned int mergeCount = 4) :
             mergeCount(mergeCount), Otmp(Otmp), maxMem(maxMemory), outdir(outdir), min(min), max(max)
     {
         // Max mem is not initialised, take from environment variable
@@ -66,7 +66,7 @@ struct SMRParams {
     unsigned int min = 0;
     unsigned int max = std::numeric_limits<unsigned int>::max();
     const std::string outdir = "./";
-    const std::string Otmp = "./tmp";
+    const std::string Otmp = "";
 };
 
 /**
@@ -119,16 +119,16 @@ public:
      * passed to the read_from_file function call (read_file). The behaviour is equivalent to that of outdir.
      */
     SMR(ReaderParamStruct reader_parameters, FactoryParamStruct factory_parameters, SMRParams smr_params) : reader_parameters(reader_parameters),
-                                                                        factory_parameters(factory_parameters),
-                                                                        totalRecordsGenerated(0),
-                                                                        tmpBase(smr_params.Otmp), outdir(smr_params.outdir), minCount(smr_params.min),
-                                                                        maxCount(smr_params.max), mergeCount(smr_params.mergeCount),
-                                                                        maxThreads((unsigned int) 1) {
+                                                                                                            factory_parameters(factory_parameters),
+                                                                                                            totalRecordsGenerated(0),
+                                                                                                            tmpBase(smr_params.Otmp), outdir(smr_params.outdir), minCount(smr_params.min),
+                                                                                                            maxCount(smr_params.max), mergeCount(smr_params.mergeCount),
+                                                                                                            maxThreads((unsigned int) 1) {
         this->outdir = std::string(outdir+"smr_files/");
         sglib::check_or_create_directory(this->outdir);
         numElementsPerBatch = (smr_params.maxMem / sizeof(RecordType) / maxThreads);
         sglib::OutputLog(sglib::DEBUG)<<"SMR created with elements of size "<<sizeof(RecordType)<<" using "<<maxThreads<<" threads and "
-                 <<smr_params.maxMem<<" Bytes of memory -> batches of "<<numElementsPerBatch<<" elements"<<std::endl;
+                                      <<smr_params.maxMem<<" Bytes of memory -> batches of "<<numElementsPerBatch<<" elements"<<std::endl;
 
     }
 
@@ -151,7 +151,6 @@ public:
         outdir = finalFilePath;
         tmpInstance = sglib::create_temp_directory(tmpBase);
         std::ifstream final_file(finalFilePath+"final.kc");
-
         if (final_file.is_open() and !do_work){
             sglib::OutputLog(sglib::DEBUG) << "Using precomputed sum file at " << outdir << "final.kc" << std::endl;
             return readFinalkc(outdir+"final.kc");
@@ -161,16 +160,16 @@ public:
             std::chrono::time_point<std::chrono::system_clock> start, end;
             start = std::chrono::system_clock::now();
 
-            std::cout <<  "Reading file: " << read_file << std::endl;
+            sglib::OutputLog(sglib::DEBUG) << "Reading file: " << read_file << std::endl;
             FileReader myFileReader(reader_parameters, read_file);
-            std::cout << "Begin reduction using " << numElementsPerBatch << " elements per batch (" << ceil(uint64_t((numElementsPerBatch*sizeof(RecordType)*maxThreads)) / (1.0f*1024*1024*1024)) << "GB)" << std::endl;
+            sglib::OutputLog(sglib::DEBUG) << "Begin reduction using " << numElementsPerBatch << " elements per batch (" << ceil(uint64_t((numElementsPerBatch*sizeof(RecordType)*maxThreads)) / (1.0f*1024*1024*1024)) << "GB)" << std::endl;
             mapElementsToBatches(myFileReader, numFileRecords);
 
             readerStatistics = myFileReader.getSummaryStatistics();
 
             end = std::chrono::system_clock::now();
             std::chrono::duration<double> elapsed_seconds = end - start;
-            std::cout << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
+            sglib::OutputLog(sglib::DEBUG) << "Done reduction in " << elapsed_seconds.count() << "s" << std::endl;
             sglib::remove_directory(tmpInstance);
             return getRecords();
         }
@@ -183,7 +182,6 @@ public:
      * @return
      * Filtered vector of RecordType elements
      */
-
     std::vector<RecordType> process_from_memory(const bool do_work = true) {
         tmpInstance = sglib::create_temp_directory(tmpBase) + "/";
         std::ifstream final_file(outdir+"final.kc");
@@ -204,7 +202,6 @@ public:
             mapElementsToBatches(myFileReader, numFileRecords);
 
             readerStatistics = myFileReader.getSummaryStatistics();
-
 
             end = std::chrono::system_clock::now();
             std::chrono::duration<double> elapsed_seconds = end - start;
@@ -244,13 +241,10 @@ private:
      */
     uint64_t merge(const std::string &tmpName, const std::vector<std::string> &files, std::vector<RecordType> &elements) {
         auto files_size(files.size());
-     std::cout << "k: " << this->factory_parameters.k << std::endl;
         auto numMemoryElements(elements.size());
         uint64_t memoryElement(0);
-        std::cout << "megre: " << files.size() << " num elems: " << elements.size() << std::endl;
         std::vector<int> in_fds(files_size );
         int out = ::open(tmpName.c_str(), O_CREAT|O_WRONLY|O_TRUNC, 0777);
-        std::cout << "out: " << out << std::endl;
 
         std::vector<bool> active_file(files_size,true);
 
@@ -260,16 +254,12 @@ private:
         std::vector<unsigned int> seen_element_from_file(files_size,0);
         uint64_t outCount(0), count0(0), bufferSize(10000000);
         uint64_t outBufferSize(50000000);
-        std::cout << "initialised vetirs: " << seen_element_from_file.size() << std::endl;
-
 
         ::write(out, &outCount, sizeof(outCount));
 
-std::cout << "wrote: " << std::endl;
         auto *outfreqs=(RecordType*) malloc(outBufferSize* sizeof(RecordType));
-std::cout << "starting loop" << std::endl;
+
         for (auto i = 0; i < files_size; i++) {
-            std::cout << "fname " << files[i].c_str() << std::endl;
             in_fds[i] = ::open(files[i].c_str(), O_RDONLY);
             uint64_t size;
             ::read(in_fds[i], &size, sizeof(size));
@@ -278,10 +268,8 @@ std::cout << "starting loop" << std::endl;
             count_element_from_file[i] = 0;
             size_element_from_file[i]=
                     ::read(in_fds[i], next_element_from_file[i], bufferSize* sizeof(RecordType)) / sizeof(RecordType);
-            std::cout << "next_element_from_file[i]: " << next_element_from_file[i] << std::endl;
             active_file[i] = true;
         }
-std::cout << "starting loop 2" << std::endl;
 
         RecordType min_element;
         unsigned int min = 0;
@@ -289,7 +277,6 @@ std::cout << "starting loop 2" << std::endl;
             if (next_element_from_file[i] < next_element_from_file[i-1]) min = i;
         }
 
-std::cout << "starting conditional" << std::endl;
         RecordType current_element;
         if (elements[memoryElement] < next_element_from_file[min][0]) {
             current_element = elements[memoryElement];
@@ -305,32 +292,20 @@ std::cout << "starting conditional" << std::endl;
             active=false;
             min_element = RecordType();
 
-
-std::cout << "starting loop 3" << std::endl;
             for (int i=0; i<files_size; ++i) {
                 if (size_element_from_file[i] <= count_element_from_file[i]) continue;
 
                 if (current_element == next_element_from_file[i][count_element_from_file[i]]) {
-
-std::cout << "count_element_from_file[i]++;" << std::endl;
                     current_element.merge(next_element_from_file[i][count_element_from_file[i]]);
                     count_element_from_file[i]++;
                     if (count_element_from_file[i] == size_element_from_file[i]) {
-std::cout << "count_element_from_file[i] == size_element_from_file[i])" << std::endl;
-
                         size_element_from_file[i] =
                                 ::read(in_fds[i], (char *) next_element_from_file[i], bufferSize*sizeof(RecordType)) / sizeof(RecordType);
                         seen_element_from_file[i]+=count_element_from_file[i];
                         count_element_from_file[i] = 0;
                     }
                 }
-                std::cout << "file  " << i <<"sizes:  " << size_element_from_file.size() << " " << next_element_from_file.size()<< " " <<count_element_from_file.size() << " min: " <<  min_element << std::endl;
                 if (count_element_from_file[i] < size_element_from_file[i]) {
-                    std::cout << "file " << i << std::endl;
-   std::cout << "file  count " << count_element_from_file[i]  << std::endl;
-std::cout << "file size " << size_element_from_file[i] << std::endl;
-std::cout << "file next" << next_element_from_file[i]->count << " kmer "  <<next_element_from_file[i]->kmer << std::endl;
-
                     if (!(next_element_from_file[i][count_element_from_file[i]] > min_element)){
                         active=true;
                         min_element = next_element_from_file[i][count_element_from_file[i]];
@@ -388,12 +363,6 @@ std::cout << "file next" << next_element_from_file[i]->count << " kmer "  <<next
      */
     uint64_t merge(const std::string &tmpName, const std::vector<std::string> &files) {
         auto files_size(files.size());
-        std::cout << "files.size(): " << files.size() << std::endl;
-        for (auto f: files){
-            std::cout << f << " ";
-        }
-        std::cout << std::endl;
-
         std::vector<int> in_fds( files_size );
         int out = ::open(tmpName.c_str(), O_CREAT|O_WRONLY|O_TRUNC, 0777);
         if (out < 0) {
@@ -407,18 +376,13 @@ std::cout << "file next" << next_element_from_file[i]->count << " kmer "  <<next
         std::vector<unsigned int> seen_element_from_file(files_size,0);
         uint64_t outCount(0), count0(0), bufferSize(10000000);
         uint64_t outBufferSize(50000000);
-        std::cout << "initialised vetirs: " << seen_element_from_file.size() << std::endl;
 
         ::write(out, &outCount, sizeof(outCount));
 
         auto *outfreqs=(RecordType*) malloc(outBufferSize* sizeof(RecordType));
-std::cout << "starting loop 1" << std::endl;
 
         for (auto i = 0; i < files_size; i++) {
-            std::cout << "files[i] " << files[i] << " i " << i << std::endl;
-                      in_fds[i] = ::open(files[i].c_str(), O_RDONLY);
-            std::cout << "in_fds[i] " << in_fds[i]  << std::endl;
-
+            in_fds[i] = ::open(files[i].c_str(), O_RDONLY);
             uint64_t size;
             ::read(in_fds[i], &size, sizeof(size));
             //sglib::OutputLog(sglib::DEBUG) << files[i] << " size " << size << " in disk " << sizeof(size) + size* sizeof(RecordType) << std::endl;
@@ -430,8 +394,6 @@ std::cout << "starting loop 1" << std::endl;
         }
 
         unsigned int min = 0;
-        std::cout << "starting loop 2" << std::endl;
-
         for (unsigned int i = 1; i < files_size; ++i) {
             if (next_element_from_file[i] < next_element_from_file[i-1]) min = i;
         }
@@ -444,16 +406,11 @@ std::cout << "starting loop 1" << std::endl;
         do {
             active=false;
             min_element = RecordType();
-std::cout << "starting loop 3" << std::endl;
 
             for (int i=0; i<files_size; ++i) {
                 if (size_element_from_file[i] <= count_element_from_file[i]) continue;
 
                 if (current_element == next_element_from_file[i][count_element_from_file[i]]) {
-
-                                                std::cout << "merging " << i << "  in fds "<< in_fds[i] << std::endl;
-
-
                     current_element.merge(next_element_from_file[i][count_element_from_file[i]]);
                     count_element_from_file[i]++;
                     if (count_element_from_file[i] == size_element_from_file[i]) {
@@ -461,21 +418,9 @@ std::cout << "starting loop 3" << std::endl;
                                 ::read(in_fds[i], (char *) next_element_from_file[i], bufferSize*sizeof(RecordType)) / sizeof(RecordType);
                         seen_element_from_file[i]+=count_element_from_file[i];
                         count_element_from_file[i] = 0;
-                                std::cout << "file " << i << std::endl;
-   std::cout << "file  count " << count_element_from_file[i]  << std::endl;
-std::cout << "file size " << size_element_from_file[i] << std::endl;
-std::cout << "file next" << next_element_from_file[i]->count << " kmer "  <<next_element_from_file[i]->kmer << std::endl;
-
-
                     }
                 }
                 if (count_element_from_file[i] < size_element_from_file[i]) {
-                    std::cout << "in conditional with failure, file " << i <<  " min: " << min_element << std::endl;
-                    std::cout << "file  count " << count_element_from_file[i]  << std::endl;
-                    std::cout << "file size " << size_element_from_file[i] << std::endl;
-                    std::cout << "file next" << next_element_from_file[i]->count << " kmer "  <<next_element_from_file[i]->kmer << std::endl;
-
-
                     if (!(next_element_from_file[i][count_element_from_file[i]] > min_element)){
                         active=true;
                         min_element = next_element_from_file[i][count_element_from_file[i]];
@@ -658,7 +603,7 @@ std::cout << "file next" << next_element_from_file[i]->count << " kmer "  <<next
 
             threadFiles[threadID] = name;
         }
-        std::cout<< "threadFiles " << threadFiles.size() << std::endl;
+
         totalFilteredRecords = merge(outdir + "final.kc", threadFiles);
 
         return readFinalkc(outdir+"final.kc");
@@ -677,7 +622,7 @@ std::cout << "file next" << next_element_from_file[i]->count << " kmer "  <<next
     uint64_t totalFilteredRecords = 0;                  /// Total number of resulting elements after filtering and merging
     const int unsigned maxThreads = 1;
     int mergeCount = 4;                                 /// How many batches to keep rolling before merging
-    const std::string tmpBase = "./tmp/";                      /// Directory to store the temporary files
+    const std::string tmpBase;                      /// Directory to store the temporary files
     std::string tmpInstance;                        /// Directory to store the temporary files for the read_from_file argument
     std::string outdir;                             /// Output directory
 };
