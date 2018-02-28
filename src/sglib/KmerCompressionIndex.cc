@@ -17,10 +17,10 @@ void KmerCompressionIndex::index_graph(){
     const int max_coverage = 1;
     const std::string output_prefix("./");
     SMR<KmerCount,
-    KmerCountFactory<FastaRecord>,
-    GraphNodeReader<FastaRecord>,
-    FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, {max_mem, 0, max_coverage,
-                                                                          output_prefix});
+            KmerCountFactory<FastaRecord>,
+            GraphNodeReader<FastaRecord>,
+            FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, {max_mem, 0, max_coverage,
+                                                                                                     output_prefix});
 
 
 
@@ -28,11 +28,8 @@ void KmerCompressionIndex::index_graph(){
     graph_kmers = kmerCount_SMR.process_from_memory();
 
     std::vector<uint64_t> uniqKmer_statistics(kmerCount_SMR.summaryStatistics());
-    // [0]- total records generated. [2] - number of reader records, graph treated like fasta
-
     std::cout << "Number of " << int(k) << "-kmers seen in assembly " << uniqKmer_statistics[0] << std::endl;
-    std::cout << "Number of contigs from the assembly " << uniqKmer_statistics[2] << " gk size: " << graph_kmers.size() <<  std::endl;
-
+    std::cout << "Number of contigs from the assembly " << uniqKmer_statistics[2] << std::endl;
 }
 
 void KmerCompressionIndex::reindex_graph(){
@@ -40,10 +37,10 @@ void KmerCompressionIndex::reindex_graph(){
     const int max_coverage = 1;
     const std::string output_prefix("./");
     SMR<KmerCount,
-    KmerCountFactory<FastaRecord>,
-    GraphNodeReader<FastaRecord>,
-    FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, {max_mem, 0, max_coverage,
-                                                                              output_prefix});
+            KmerCountFactory<FastaRecord>,
+            GraphNodeReader<FastaRecord>,
+            FastaRecord, GraphNodeReaderParams, KmerCountFactoryParams> kmerCount_SMR({1, sg}, {k}, {max_mem, 0, max_coverage,
+                                                                                                     output_prefix});
 
 
 
@@ -117,8 +114,7 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
     std::atomic<uint64_t> present(0), absent(0), rp(0);
     std::unordered_map<uint64_t,uint64_t> kmer_map;
     for (uint64_t i=0;i<graph_kmers.size();++i) kmer_map[graph_kmers[i].kmer]=i;
-    size_t  sum = 0;
-    size_t  kmers_in_reads = 0;
+
 #pragma omp parallel shared(fastqReader)
     {
         std::vector<uint16_t> thread_counts(read_counts.back().size(),0);
@@ -161,22 +157,16 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
         //Update shared counts
 #pragma omp critical(countupdate)
         {
-
-            for (uint64_t i=0;i<read_counts.back().size();++i) {
-                read_counts.back()[i]+=thread_counts[i];
-                sum += thread_counts[i];
-                if (thread_counts[i] != 0){
-                    kmers_in_reads += 1;
-                }
-            }
+            for (uint64_t i=0;i<read_counts.back().size();++i) read_counts.back()[i]+=thread_counts[i];
         }
     }
-    std::cout << rp << " reads processed "<< present <<" / " << present+absent << " kmers found, mean kmers in reads: " << sum/kmers_in_reads<< std::endl;
+    // somehow for my test data with 700 reads, totak count is 834 for r2...
+    std::cout << rp << " reads processed "<< present <<" / " << present+absent << " kmers found" << std::endl;
 }
 
 
 
-void KmerCompressionIndex::compute_compression_stats(size_t lib) {
+void KmerCompressionIndex::compute_compression_stats() {
     //compute mean, median and mode, as of now, only use the first read count
 
     uint64_t covuniq[1001];
@@ -184,9 +174,9 @@ void KmerCompressionIndex::compute_compression_stats(size_t lib) {
     uint64_t tuniq=0,cuniq=0;
     for (uint64_t i=0; i<graph_kmers.size(); ++i){
         if (graph_kmers[i].count==1){
-            tuniq+=read_counts[lib][i];
+            tuniq+=read_counts[0][i];
             ++cuniq;
-            ++covuniq[(read_counts[lib][i]<1000 ? read_counts[lib][i] : 1000 )];
+            ++covuniq[(read_counts[0][i]<1000 ? read_counts[0][i] : 1000 )];
         }
     }
     uint64_t cseen=0,median=0;
@@ -198,48 +188,41 @@ void KmerCompressionIndex::compute_compression_stats(size_t lib) {
     std::cout << "Mode coverage for unique kmers:   " << mode <<std::endl;
 
     if (median<.9*mode or median>.9*mode ) std::cout<<"WARNING -> median and mode highly divergent"<<std::endl;
-    uniq_mode=mode != 0 ? mode:1;// this was usually 0... makes no sense to have a kmer that appears 0 times!!
-
+    uniq_mode=mode;
 
 }
 
-void KmerCompressionIndex::dump_histogram(std::string filename, uint16_t dataset) {
+void KmerCompressionIndex::dump_histogram(std::string filename) {
     std::ofstream kchf(filename);
     uint64_t covuniq[1001];
     for (auto &c:covuniq)c=0;
     uint64_t tuniq=0,cuniq=0;
     for (uint64_t i=0; i<graph_kmers.size(); ++i){
         if (graph_kmers[i].count==1){
-            tuniq+=read_counts[dataset][i];
+            tuniq+=read_counts[0][i];
             ++cuniq;
-            ++covuniq[(read_counts[dataset][i]<1000 ? read_counts[dataset][i] : 1000 )];
+            ++covuniq[(read_counts[0][i]<1000 ? read_counts[0][i] : 1000 )];
         }
     }
     for (auto i=0;i<1000;++i) kchf<<i<<","<<covuniq[i]<<std::endl;
 }
 
-double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
+double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq, uint16_t dataset) {
 
     auto & node=sg.nodes[_node>0 ? _node:-_node];
+
     std::vector<uint64_t> nkmers;
     StringKMerFactory skf(node.sequence,31);
     skf.create_kmers(nkmers);
-    //std::cout << node.sequence << std::endl;
-    int counter = 0;
 
     uint64_t kcount=0,kcov=0;
-    std::cout << "kmers in nodes: " << nkmers.size() << std::endl;
     for (auto &kmer : nkmers){
-        // find kmer in graph kmer with count > 0?
         auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
-        if (nk!=graph_kmers.end() and nk->kmer == kmer and nk-> count > 0) {
-            counter +=1;
-            ++kcount;// inrement number of (unique??- now removed count = 1 ) kmers on node
-            kcov+=read_counts[dataset][nk-graph_kmers.begin()]; // inrement coverage by count for this kmer in read set
+        if (nk!=graph_kmers.end() and nk->kmer == kmer and nk->count==1) {
+            ++kcount;
+            kcov+=read_counts[dataset][nk-graph_kmers.begin()];
         }
-
     }
-    // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
-    return (((double) kcount) )/nkmers.size();
 
+    return (((double) kcov)/kcount )/uniq_mode;
 }

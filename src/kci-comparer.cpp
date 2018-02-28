@@ -165,13 +165,13 @@ int main(int argc, char * argv[]) {
             kci.start_new_count();
             kci.add_counts_from_file(cidxreads1[lib]);
             kci.add_counts_from_file(cidxreads2[lib]);
-            kci.compute_compression_stats(lib);
-            kci.dump_histogram(output_prefix + "_" + std::to_string(lib) + ".csv", lib);
+            kci.compute_compression_stats();
+            kci.dump_histogram(output_prefix + "_" + std::to_string(lib) + ".csv");
             std::cout << "Counted reads for lib " << lib << " \n";
             kci_assembly2 << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
             for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++) {
 
-                if (sg.is_canonical_repeat(counter)) {
+                //if (sg.is_canonical_repeat(counter)) {
                     auto bw = sg.get_bw_links(counter);
                     auto fw = sg.get_fw_links(counter);
                     // percent present/absent doesn't do it - or not obviously
@@ -193,14 +193,14 @@ int main(int argc, char * argv[]) {
                     kci_assembly2 << std::endl;
                     count += 1;
 
-                } else {
+                /*} else {
                     kci_assembly << " ,";
-                }
+                }*/
 
             }
             kci_assembly << std::endl;
 
-            std::cout << "calculated compression for " << lib << " for " << count << std::endl;
+            std::cout << "calculated compression for " << lib << " for " << count << "nodes" <<std::endl;
         }
     }
 

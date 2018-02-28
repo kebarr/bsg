@@ -20,11 +20,11 @@ public:
 
     void save_to_disk(std::string filename);
     void load_from_disk(std::string filename);
-    void compute_compression_stats(size_t lib=0);
+    void compute_compression_stats();
 
-    void dump_histogram(std::string filename, uint16_t dataset=0);
+    void dump_histogram(std::string filename);
 
-    double compute_compression_for_node(sgNodeID_t node, uint16_t max_graph_freq=10, int dataset=0);
+    double compute_compression_for_node(sgNodeID_t node, uint16_t max_graph_freq=10, uint16_t dataset=0);
     SequenceGraph & sg;
     std::vector<KmerCount> graph_kmers;
     std::vector<std::vector<uint16_t>> read_counts;

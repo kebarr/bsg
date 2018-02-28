@@ -304,8 +304,17 @@ private:
                         seen_element_from_file[i]+=count_element_from_file[i];
                         count_element_from_file[i] = 0;
                     }
-                }
+            }
                 if (count_element_from_file[i] < size_element_from_file[i]) {
+                   /* if (RecordType is FastqReader){
+                    std::cout << next_element_from_file[i]->name << " " << next_element_from_file[i]->comment << " " << next_element_from_file[i].seq << std::endl;
+                    } else if (RecordType == KmerIDX){
+                        std::cout << next_element_from_file[i]->kmer << " " << next_element_from_file[i]->contigID << " " << next_element_from_file[i]->pos << " " << next_element_from_file[i]->count << std::endl;
+                    } else if (RecordType == KmerCount){
+                        std::cout << next_element_from_file[i]->kmer << " " << next_element_from_file[i]->count << std::endl;
+
+                    }*/
+
                     if (!(next_element_from_file[i][count_element_from_file[i]] > min_element)){
                         active=true;
                         min_element = next_element_from_file[i][count_element_from_file[i]];
