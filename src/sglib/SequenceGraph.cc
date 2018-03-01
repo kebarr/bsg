@@ -15,7 +15,6 @@
 #include "sglib/readers/FileReader.h"
 
 bool Node::is_canonical() {
-    if (sequence.size() > 0) {
         for (size_t i = 0, j = sequence.size() - 1; i < j; ++i, --j) {
             char f = sequence[i];
             char r = sequence[j];
@@ -40,7 +39,7 @@ bool Node::is_canonical() {
             if (f < r) return true;
             if (r < f) return false;
         }
-    }
+    
     return true;
 };
 
