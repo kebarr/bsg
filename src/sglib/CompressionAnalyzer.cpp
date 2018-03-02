@@ -5,19 +5,25 @@
 #include "CompressionAnalyzer.h"
 
 
-CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile), outfile_csv_name(outfile+".csv"),kci(InitializeKCI()){
+CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(InitializeKCI()){
+    InitializeKCI();
 };
 
-void CompressionAnalyzer::InitializeLib(std::string lib_name) {
-    std::cout << "Initializing  compression analysis of " << lib_name << std::endl;
+void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib_name_r2) {
+    std::cout << "Initializing  compression analysis of " << lib_name_r1 << std::endl;
 
-    NodeCompressions nc = {lib_name};
+    NodeCompressions nc = {lib_name_r1, lib_name_r2};
     nc.compressions.resize(sg.nodes.size(), -1);
     compressions.push_back(nc);
+    kci.start_new_count();
+    kci.add_counts_from_file(lib_name_r1);
+    kci.add_counts_from_file(lib_name_r2);
 
 };
 
-void CompressionAnalyzer::CalculateCompressions(std::string outfile) {
+void CompressionAnalyzer::CalculateCompressions() {
+    std::cout << "Calvulating compressions for each of " << compressions.size() << " read sets" << std::endl;
+
     for (auto nc:compressions) {
         Calculate(nc);
     }
@@ -47,11 +53,21 @@ KmerCompressionIndex CompressionAnalyzer::InitializeKCI () {
 
     std::cout << "Initialization complete" << std::endl;
 
-    return kci;
+     std::ofstream outfile_csv;
+    outfile_csv.open(outfile_csv_name, std::ofstream::out );
+    for (size_t counter = 0; counter < sg.nodes.size(); counter++) {
+        outfile_csv << sg.oldnames[counter] << ", ";
+    }
+    outfile_csv << std::endl;
+    if (kci.read_counts.size()>0) {
+        kci.compute_compression_stats();
+        kci.dump_histogram(outfile_name + "kci_histogram.csv");
+    }
 
 }
 
-
+// can wtite and test many versions of these- e.g taking inti acoount average compression for all contigs,
+// allow for >2 repeats, vary heuristics and heristic parametes
 std::vector<double> CompressionAnalyzer::AnalyseRepeat(std::vector<double> repeat_compressions, double tolerance=0.95, double diff_threshold=10) {
     bool exit = false;
     if (repeat_compressions.size() > 5) {
@@ -237,7 +253,7 @@ std::cout << "stats for all contigs, min  " << all_stats[4]<< " max: " << all_st
         }
     }
 
-    std::cout << "calculated compression for " << nc.lib_name << " for " <<
+    std::cout << "calculated compression for " << nc.lib_name_r1 << " for " <<
               compressions.size() << " nodes, maps to " << repeat_contig_values.size() << " repeats, of which " << resolved_repeat_count << "resolved. \n"
                       " calxulated scores for  " << repeat_contig_values.size() << " repeated contigs, including the in/out contigs,  " << all_repeat_contig_values.size() << " scored in total, of which  " << in_out_sane << " in/out compression sums are consistent and " << repeated_contig_sane << " repeated contig compressions are consistent with in/out suns"  << std::endl;
 

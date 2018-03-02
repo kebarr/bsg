@@ -6,6 +6,7 @@
 #include <sglib/GraphPartitioner.hpp>
 #include "sglib/SequenceGraph.h"
 #include "cxxopts.hpp"
+#include <sglib/CompressionAnalyzer.h>
 
 
 
@@ -165,65 +166,27 @@ int main(int argc, char * argv[]) {
         exit(1);
     }
 
-
+    std::ofstream outfile;
+    outfile.open(output_prefix, std::ofstream::out |std::ofstream::app);
     std::cout << "Executed command:" << std::endl;
     for (auto i = 0; i < argc; i++) std::cout << argv[i] << " ";
     std::cout << std::endl << std::endl;
-    if (gfa_list != "") {
-        std::ifstream infile(gfa_list);
-        std::string line;
-        std::string fields[2];
-        while (std::getline(infile, line)) {
-            std::istringstream(line) >> fields[0] >> fields[1];
-            std::cout << "calculating compression for: " << fields[0] << " from " << fields[1] << std::endl;
-            output_kci_for_assembly(fields[0], fields[1], cidxreads1[0], cidxreads2[0], max_mem_gb, dump_cidx);
-
-        }
-    } else {
 
         auto fasta_filename = gfa_filename.substr(0, gfa_filename.size() - 4) + ".fasta";
         SequenceGraph sg;
         sg.load_from_gfa(gfa_filename);
 
         std::cout << std::endl << "=== Loading reads compression index ===" << std::endl;
-//compression index
-        KmerCompressionIndex kci(sg, max_mem_gb * 1024L * 1024L * 1024L);
+        CompressionAnalyzer ca(sg, max_mem_gb, output_prefix +"_detailed");
 
-        kci.index_graph();
-
-
-        std::ofstream kci_assembly(output_prefix + "_kcis.csv");
-
-
-        std::ofstream kci_assembly2(output_prefix + "_kcis_repeats.csv");
-        for (size_t counter = 0; counter < sg.nodes.size(); counter++) {
-            kci_assembly << sg.oldnames[counter] << ", ";
-        }
-        kci_assembly << std::endl;
 
         for (int lib = 0; lib < cidxreads1.size(); lib++) {
-            int count = 0;
-            int mapped_repeat_count = 0;
-            int resolved_repeat_count = 0;
+            ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
 
-            int sum = 0;
-            double in_out_sane = 0;
-            double repeated_contig_sane = 0;
-            std::vector<double> compressions;
-            std::vector<double> repeat_vals;
-            std::vector<double> repeat_contig_values;
-            // shitty- make proper clsass
-            std::map<sgNodeID_t, double> repeats;
-            std::map<sgNodeID_t, double> nonrepeats;
-            kci.start_new_count();
-            kci.add_counts_from_file(cidxreads1[lib]);
-            kci.add_counts_from_file(cidxreads2[lib]);
-            kci.compute_compression_stats();
-            kci.dump_histogram(output_prefix + "_" + std::to_string(lib) + ".csv");
-            std::cout << "Counted reads for lib " << lib << " \n";
-            kci_assembly2 << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
+            outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
 
         }
+    ca.CalculateCompressions();
 
     }
-}
+

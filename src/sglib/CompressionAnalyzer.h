@@ -15,7 +15,9 @@
 
 
 struct NodeCompressions {
-    std::string lib_name;
+    std::string lib_name_r1;
+    std::string lib_name_r2;
+
     //std::map<sgNodeID_t, double> compressions; - just use sg indexing
     std::vector< double> compressions;
     std::vector<std::vector<sgNodeID_t >> canonical_repeats;
@@ -28,8 +30,8 @@ public:
     CompressionAnalyzer(SequenceGraph &, uint64_t,  std::string);
 
     std::vector<NodeCompressions> compressions;
-    void InitializeLib(std::string );
-    void CalculateCompressions(std::string);
+    void InitializeLib(std::string , std::string  );
+    void CalculateCompressions();
 
 
 private:
