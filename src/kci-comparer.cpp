@@ -8,6 +8,51 @@
 #include "cxxopts.hpp"
 
 
+
+std::vector<double> analyse_repeat(std::vector<double> repeat_compressions, double tolerance=0.95, double diff_threshold=10){
+
+    // see if repeat phased by reads- if compressions on each side pair to be reasonably close
+    // sum of compressions on each side should be a multiple of middle compression
+
+    auto in_sum = repeat_compressions[0] + repeat_compressions[1];
+    auto out_sum = repeat_compressions[3] + repeat_compressions[4];
+    double in_out_sane = 0;
+    double repeat_count_sane = 0;
+
+    std::vector<double> res;
+    if (tolerance*in_sum < out_sum < (1-tolerance)*in_sum){
+        in_out_sane = 1;
+        // not sure this actually works for way i\m calculating 'compression'
+        // contig repeated 5 timea should have 5*kmers in reads than average, and 5*reads going in, split in a sane way- i/e. shouldn't be 1 kmer on one in, 100 on other in, then 50/50 out
+        if (std::abs(in_sum - repeat_compressions[2]) < tolerance && std::abs(out_sum - repeat_compressions[2]) < tolerance){
+            repeat_count_sane = 1;
+        }
+        // in this ase check if resolves repeat, find out closest to in and see if close enough to call
+        auto pairs = repeat_compressions[3]-repeat_compressions[0] < repeat_compressions[4]-repeat_compressions[0] ? std::make_pair(3, 4) : std::make_pair(4, 3);
+        if (std::abs(repeat_compressions[0] - repeat_compressions[std::get<0>(pairs)]) < std::abs((repeat_compressions[0] - repeat_compressions[std::get<1>(pairs)]*diff_threshold)) && std::abs(repeat_compressions[1] - repeat_compressions[std::get<1>(pairs)]) < std::abs((repeat_compressions[0] - repeat_compressions[std::get<1>(pairs)]*diff_threshold))){
+            // then accprding to this arbitrary heiristic, we resolve to get 0 with pair 0
+            res.push_back(repeat_compressions[std::get<0>(pairs)]);
+            res.push_back(repeat_compressions[0] + repeat_compressions[std::get<0>(pairs)]);
+
+            res.push_back(repeat_compressions[std::get<1>(pairs)]);
+            res.push_back(repeat_compressions[1] + repeat_compressions[std::get<1>(pairs)]);
+
+        } else {
+            // if its not resolved its more useful to know how different they were
+            res.push_back(0);
+            res.push_back(repeat_compressions[0] - repeat_compressions[std::get<0>(pairs)]);
+            res.push_back(0);
+            res.push_back(repeat_compressions[1] - repeat_compressions[std::get<1>(pairs)]);
+
+        }
+        res.push_back(in_out_sane);
+        res.push_back(repeat_count_sane);
+    }
+    return  res;
+
+}
+
+
 void output_kci_for_assembly(std::string gfa_name,std::string assembly_name, std::string cidxread1, std::string cidxread2, uint64_t max_mem_gb, std::string dump_cidx=""){
     auto fasta_filename=gfa_name.substr(0,gfa_name.size()-4)+".fasta";
     SequenceGraph sg;
@@ -162,6 +207,15 @@ int main(int argc, char * argv[]) {
 
         for(int lib=0;lib<cidxreads1.size();lib++) {
             int count = 0;
+            int mapped_repeat_count = 0;
+            int resolved_repeat_count = 0;
+
+            int sum = 0;
+            double in_out_sane = 0
+            double repeated_contig_sane = 0;
+            std::vector<double> compressions;
+            std::vector<double> repeat_vals;
+            std::vector<double> repeat_contig_values;
             kci.start_new_count();
             kci.add_counts_from_file(cidxreads1[lib]);
             kci.add_counts_from_file(cidxreads2[lib]);
@@ -171,36 +225,98 @@ int main(int argc, char * argv[]) {
             kci_assembly2 << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
             for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++) {
 
-                //if (sg.is_canonical_repeat(counter)) {
+                if (sg.is_canonical_repeat(counter)) {
+                    int nonzeros = 0;
                     auto bw = sg.get_bw_links(counter);
                     auto fw = sg.get_fw_links(counter);
-                    // percent present/absent doesn't do it - or not obviously
+                    // percent present/absent doesn't do it - or not obviously, now dropped unique kmer requirement
                     for (auto b: bw){
                         auto kci_node = kci.compute_compression_for_node(b.dest, 10, lib);
                         kci_assembly << kci_node << ", ";
                         auto ind = b.dest > 0 ? b.dest : -b.dest;
                         kci_assembly2 << sg.oldnames[ind] << ": " << kci_node << ", " << sg.nodes[ind].sequence.size() << ", ";
+                        sum +=kci_node;
+                        compressions.push_back(kci_node);
+                        repeat_vals.push_back(kci_node);
+                        if (kci_node > 0 ) nonzeros +=1;
+                        kci_node = 0;
+
                     }
                     auto kci_node = kci.compute_compression_for_node(counter, 10, lib);
                     kci_assembly << kci_node << ", ";
+                    sum +=kci_node;
+                    compressions.push_back(kci_node);
+                    repeat_contig_values.push_back(kci_node);
+                    repeat_vals.push_back(kci_node);
+                    if (kci_node > 0 ) nonzeros +=1;
+                    kci_node = 0;
+
+
                     kci_assembly2 << sg.oldnames[counter] << ": " << kci_node << ", "<< sg.nodes[counter].sequence.size() << ", ";
                     for (auto f: fw){
                         auto kci_node = kci.compute_compression_for_node(f.dest, 10, lib);
                         kci_assembly << kci_node << ", ";
                         auto ind = f.dest > 0? f.dest : -f.dest;
                         kci_assembly2 << sg.oldnames[ind] << ": " << kci_node << ", " << sg.nodes[ind].sequence.size() << ", ";
+                        sum +=kci_node;
+                        compressions.push_back(kci_node);
+                        repeat_vals.push_back(kci_node);
+                        if (kci_node > 0 ) nonzeros +=1;
+
+                        kci_node = 0;
+
+
                     }
                     kci_assembly2 << std::endl;
                     count += 1;
+                    if (nonzeros >=3 ) {
+                        mapped_repeat_count += 1;
+                        auto res = analyse_repeat(repeat_vals);
+                        in_out_sane += res[4];
+                        repeated_contig_sane += res[5];
 
-                /*} else {
+                        if (res[0] != 0) {
+                            kci_assembly2 <<  "Resolved: ";
+                            resolved_repeat_count += 1;
+                        }
+
+                        for (auto r:res ){
+                            kci_assembly2 << r << ", ";
+                        }
+                    } else {
+                        kci_assembly2 << "repeat not present " << std::endl;
+                    }
+                    kci_assembly2 << std::endl;
+
+                    repeat_vals.clear();
+                } else {
                     kci_assembly << " ,";
-                }*/
+                }
 
             }
             kci_assembly << std::endl;
+            double sd;
+            double mean = sum/compressions.size();
+            for (auto c:compressions){
+                sd += (c-mean)*(c-mean);
+            }
+            sd = (std::pow(sd, 0.5))/(compressions.size()-1);
+            auto max = std::max_element(compressions.begin(), compressions.end());
+            auto min = std::min_element(compressions.begin(), compressions.end());
 
-            std::cout << "calculated compression for " << lib << " for " << count << "nodes" <<std::endl;
+            std::cout << "calculated compression for " << lib << " for " <<
+                                                                         compressions.size() << " nodes, maps to " << mapped_repeat_count << " repeats, of which " << resolved_repeat_count << "resolved. \n"
+                    " calxulated scores for  " << repeat_contig_values.size() << " repeated contigs, including the in/out contigs,  " << repeat_vals.size() << " scored in total, of which  " << in_out_sane << " in/out compression sums are consistent and " << repeated_contig_sane << " repeated contig compressions are consistent with in/out suns"  << std::endl;
+
+            std::cout << "stats for all contigs in cononical repeats, min  " << min* << " max "
+            double sd2;
+            double mean2 = sum/repeat_contig_values.size();
+            for (auto c:repeat_contig_values){
+                sd2 += (c-mean2)*(c-mean2);
+            }
+            sd2 = (std::pow(sd2, 0.5))/(repeat_contig_values.size()-1);
+            auto max2 = std::max_element(repeat_contig_values.begin(), repeat_contig_values.end());
+            auto min2 = std::min_element(repeat_contig_values.begin(), repeat_contig_values.end());
         }
     }
 
