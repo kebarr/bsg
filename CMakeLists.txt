@@ -213,7 +213,7 @@ add_executable(seq-sorter
                src/seq-sorter.cpp)
 
 add_executable(kci-comparer
-        src/kci-comparer.cpp)
+        src/kci-comparer.cpp src/sglib/CompressionAnalyzer.cpp src/sglib/CompressionAnalyzer.h)
 
 
 add_executable(map-lr
