@@ -226,7 +226,7 @@ double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint
     int counter = 0;
 
     uint64_t kcount=0,kcov=0;
-    std::cout << "kmers in nodes: " << nkmers.size() << std::endl;
+    //std::cout << "kmers in nodes: " << nkmers.size() << std::endl;
     for (auto &kmer : nkmers){
         // find kmer in graph kmer with count > 0?
         auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));

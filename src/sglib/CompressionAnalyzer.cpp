@@ -5,14 +5,13 @@
 #include "CompressionAnalyzer.h"
 
 
-CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(InitializeKCI()){
-    InitializeKCI();
-};
+CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(InitializeKCI()){};
 
 void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib_name_r2) {
     std::cout << "Initializing  compression analysis of " << lib_name_r1 << std::endl;
 
-    NodeCompressions nc = {lib_name_r1, lib_name_r2};
+    NodeCompressions nc = {lib_name_r1, lib_name_r2, static_cast<int>(compressions.size())};
+    //nc.index = compressions.size();
     nc.compressions.resize(sg.nodes.size(), -1);
     compressions.push_back(nc);
     kci.start_new_count();
@@ -133,28 +132,46 @@ std::vector<double> CompressionAnalyzer::AnalyseRepeat(std::vector<double> repea
 
 
 void CompressionAnalyzer::Calculate(NodeCompressions & nc){
+    std::cout << "calculating compressions of " << nc.lib_name_r1 << " and " << nc.lib_name_r2 << std::endl;
     std::ofstream outfile;
    outfile.open(outfile_name, std::ofstream::out |std::ofstream::app);
     std::ofstream outfile_csv;
     outfile_csv.open(outfile_csv_name, std::ofstream::out |std::ofstream::app);
-    std::vector<std::vector<sgNodeID_t > > repeats;
     std::vector<double > repeat_contig_values;
     std::vector<double > all_repeat_contig_values;
+    std::vector<sgNodeID_t > repeat_contigs = {};
     int count =0;
+    int repeats = 0;
     double resolved_repeat_count =0;
     double  in_out_sane =0;
     int repeated_contig_sane =0;
 
     for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++) {
+        // lines4 pnted "kmers in node " 33 times so get info about roughly where that is
+                if (31 < count < 34){
+                    std::cout << "Counter: " << counter << " sg.oldnames: " << sg.oldnames[counter] << " nc " << nc.lib_name_r2 << " r1: " << nc.lib_name_r1 << " kci.read_counts.size() "<< kci.read_counts.size() << " ind: "<< nc.index << " nc.canonical_repeats.si" << nc.canonical_repeats.size() << std::endl;
+                    for (auto e: sg.get_bw_links(counter)){
+                        auto ind = e.dest > 0 ? e.dest : -e.dest;
+                        std::cout << "bw " << e << " old: " << sg.oldnames[ind] << " comp: "<< kci.compute_compression_for_node(e.dest, 10, nc.index) <<  " comp e.dest " << nc.compressions[e.dest] << std::endl;
+                    }
+
+                    for (auto e: sg.get_fw_links(counter)){
+                        auto ind = e.dest > 0 ? e.dest : -e.dest;
+                        std::cout << "bw " << e << " old: " << sg.oldnames[ind] << " comp: "<< kci.compute_compression_for_node(e.dest, 10, nc.index) <<  " comp e.dest " << nc.compressions[e.dest] << std::endl;
+                    }
+                }
                 if (nc.compressions[counter] == -1) {
                     if (sg.is_canonical_repeat(counter)) {
+                        repeats += 1;
                         std::vector<sgNodeID_t > repeat_contigs = {counter};
+                        std::vector<double > local_repeat_contig_values;
                         int nonzeros = 0;
                         auto bw = sg.get_bw_links(counter);
                         auto fw = sg.get_fw_links(counter);
                         // percent present/absent doesn't do it - or not obviously, now dropped unique kmer requirement
                         for (auto b: bw) {
                             auto kci_node = kci.compute_compression_for_node(b.dest, 10, nc.index);
+                            count += 1;
                             outfile_csv << kci_node << ", ";
                             auto ind = b.dest > 0 ? b.dest : -b.dest;
                             outfile << sg.oldnames[ind] << ": " << kci_node << ", "
@@ -163,16 +180,18 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                             nc.compressions[b.dest] = kci_node;
                             if (kci_node > 0) nonzeros += 1;
                             repeat_contigs.push_back(b.dest);
+                            local_repeat_contig_values.push_back(kci_node);
                             all_repeat_contig_values.push_back(kci_node);
                             kci_node = 0;
 
                         }
                         auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
+                        count += 1;
                         outfile_csv << kci_node << ", ";
-                        repeat_contig_values.push_back(kci_node);
                         if (kci_node > 0) nonzeros += 1;
                         nc.compressions[counter] = kci_node;
                         all_repeat_contig_values.push_back(kci_node);
+                        local_repeat_contig_values.push_back(kci_node);
 
                         kci_node = 0;
 
@@ -180,6 +199,7 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                                       << sg.nodes[counter].sequence.size() << ", ";
                         for (auto f: fw) {
                             auto kci_node = kci.compute_compression_for_node(f.dest, 10, nc.index);
+                            count += 1;
                             outfile_csv << kci_node << ", ";
                             auto ind = f.dest > 0 ? f.dest : -f.dest;
                             outfile << sg.oldnames[ind] << ": " << kci_node << ", "
@@ -190,15 +210,15 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                             nc.compressions[f.dest] = kci_node;
                             repeat_contigs.push_back(f.dest);
                             all_repeat_contig_values.push_back(kci_node);
-                            repeat_contig_values.push_back(kci_node);
+                            local_repeat_contig_values.push_back(kci_node);
+
 
                             kci_node = 0;
 
                         }
                         outfile << std::endl;
-                        count += 1;
                         if (nonzeros >= 3) {
-                            auto res = AnalyseRepeat(all_repeat_contig_values);
+                            auto res = AnalyseRepeat(local_repeat_contig_values);
                             in_out_sane += res[4];
                             repeated_contig_sane += res[5];
 
@@ -217,9 +237,10 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                         }
                         outfile << std::endl;
 
-                        all_repeat_contig_values.clear();
+                        local_repeat_contig_values.clear();
                     } else {
                         auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
+                        count += 1;
                         outfile_csv << kci_node << ", ";
                         nc.compressions[counter] = kci_node;
                     }
@@ -254,8 +275,8 @@ std::cout << "stats for all contigs, min  " << all_stats[4]<< " max: " << all_st
     }
 
     std::cout << "calculated compression for " << nc.lib_name_r1 << " for " <<
-              compressions.size() << " nodes, maps to " << repeat_contig_values.size() << " repeats, of which " << resolved_repeat_count << "resolved. \n"
-                      " calxulated scores for  " << repeat_contig_values.size() << " repeated contigs, including the in/out contigs,  " << all_repeat_contig_values.size() << " scored in total, of which  " << in_out_sane << " in/out compression sums are consistent and " << repeated_contig_sane << " repeated contig compressions are consistent with in/out suns"  << std::endl;
+              compressions.size() << " nodes, maps to more than 3 nodes of " << nc.canonical_repeats.size() << " repeats, of which " << resolved_repeat_count << "resolved. \n"<<
+                     " including the in/out contigs,  " << all_repeat_contig_values.size() << " scored in total, of which  " << in_out_sane << " in/out compression sums are consistent and " << repeated_contig_sane << " repeated contig compressions are consistent with in/out suns"  << std::endl;
 
 
         }

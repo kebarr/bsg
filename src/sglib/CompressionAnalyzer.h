@@ -17,11 +17,11 @@
 struct NodeCompressions {
     std::string lib_name_r1;
     std::string lib_name_r2;
+    int index;
 
     //std::map<sgNodeID_t, double> compressions; - just use sg indexing
     std::vector< double> compressions;
     std::vector<std::vector<sgNodeID_t >> canonical_repeats;
-    int index;
 };
 
 
