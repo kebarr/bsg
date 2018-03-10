@@ -30,12 +30,12 @@ public:
     CompressionAnalyzer(SequenceGraph &, uint64_t,  std::string);
 
     std::vector<NodeCompressions> compressions;
-    void InitializeLib(std::string , std::string  );
+    void InitializeLib(std::string , std::string , std::string save_to="" );
     void CalculateCompressions();
 
 
 private:
-    KmerCompressionIndex InitializeKCI();
+    void InitializeKCI();
 
     std::vector<double> AnalyseRepeat(std::vector<double> repeat_compressions, double tolerance=0.95, double diff_threshold=10);
         void Calculate(NodeCompressions & );

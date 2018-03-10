@@ -11,6 +11,7 @@ KmerCompressionIndex::KmerCompressionIndex(SequenceGraph &_sg, uint64_t _max_mem
     max_mem = _max_mem;
 }
 
+
 void KmerCompressionIndex::index_graph(){
     const int k = 31;
     const int max_coverage = 1;
@@ -110,7 +111,7 @@ void KmerCompressionIndex::start_new_count(){
 
 void KmerCompressionIndex::add_counts_from_file(std::string filename) {
 
-    std::cout<<"counting from file"<<std::endl;
+    std::cout<<"counting from file, graph_kmers.size(): "<< graph_kmers.size() << " sg.nodes.size() " << sg.nodes.size() <<std::endl;
 
     FastqReader<FastqRecord> fastqReader({0},filename);
     std::atomic<uint64_t> present(0), absent(0), rp(0);

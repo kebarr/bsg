@@ -149,6 +149,7 @@ add_library(sequence_graph SHARED
             src/sglib/KmerCompressionIndex.cc
             src/sglib/GraphPartitioner.cc
             src/sglib/logger/OutputLog.cc
+        src/sglib/CompressionAnalyzer.cpp
             )
 
 target_link_libraries(sequence_graph ${DEPENDENCY_LIBS})

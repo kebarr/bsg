@@ -5,18 +5,27 @@
 #include "CompressionAnalyzer.h"
 
 
-CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(InitializeKCI()){};
+CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb){
+    InitializeKCI();
 
-void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib_name_r2) {
-    std::cout << "Initializing  compression analysis of " << lib_name_r1 << std::endl;
+};
+
+void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib_name_r2, std::string save_to="") {
+    std::cout << "Initializing  compression analysis of " << lib_name_r1 << " to save to: " << save_to << std::endl;
 
     NodeCompressions nc = {lib_name_r1, lib_name_r2, static_cast<int>(compressions.size())};
     //nc.index = compressions.size();
     nc.compressions.resize(sg.nodes.size(), -1);
     compressions.push_back(nc);
     kci.start_new_count();
+
+    std::cout << sg.nodes.size()<< std::endl;
+    std::cout <<kci.sg.nodes.size()<< std::endl;
     kci.add_counts_from_file(lib_name_r1);
     kci.add_counts_from_file(lib_name_r2);
+    if (save_to != ""){
+        kci.save_to_disk(save_to);
+    }
 
 };
 
@@ -44,12 +53,14 @@ std::vector<double > CompressionAnalyzer::CompressionStats(std::vector<double> r
 
 };
 
-KmerCompressionIndex CompressionAnalyzer::InitializeKCI () {
+void CompressionAnalyzer::InitializeKCI () {
     std::cout << "Initializing kmer copression index, indexig sequene graph" << std::endl;
-    KmerCompressionIndex kci(sg, max_mem_gb * 1024L * 1024L * 1024L);
-
+    //KmerCompressionIndex kci(sg, max_mem_gb * 1024L * 1024L * 1024L);
+    //this->kci = kci;
     kci.index_graph();
 
+    std::cout << sg.nodes.size()<< std::endl;
+    std::cout <<kci.sg.nodes.size()<< std::endl;
     std::cout << "Initialization complete" << std::endl;
 
      std::ofstream outfile_csv;
