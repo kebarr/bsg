@@ -10,6 +10,16 @@ CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb
 
 };
 
+void CompressionAnalyzer::InitializeLibFromDump(std::string lib_name) {
+    std::cout << "Retrieving kci of " << lib_name << std::endl;
+    NodeCompressions nc;
+    nc.lib_name_r1 = lib_name;
+    nc.lib_name_r2 = lib_name;
+    nc.index= static_cast<int>(compressions.size());
+    kci.load_from_disk(lib_name);
+
+}
+
 void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib_name_r2, std::string save_to="") {
     std::cout << "Initializing  compression analysis of " << lib_name_r1 << " to save to: " << save_to << std::endl;
 
@@ -24,7 +34,7 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
     kci.add_counts_from_file(lib_name_r1);
     kci.add_counts_from_file(lib_name_r2);
     if (save_to != ""){
-        kci.save_to_disk(save_to);
+        kci.save_to_disk(save_to, nc.index);
     }
 
 };
@@ -108,8 +118,8 @@ std::vector<double> CompressionAnalyzer::AnalyseRepeat(std::vector<double> repea
     double in_out_sane = 0;
     double repeat_count_sane = 0;
 
-    std::vector<double> res;
-    if (tolerance*in_sum < out_sum < (1-tolerance)*in_sum){
+    std::vector<double> res = {0,0,0,0,0,0};
+    if (tolerance*in_sum < out_sum && out_sum  < (1-tolerance)*in_sum){
         in_out_sane = 1;
         // not sure this actually works for way i\m calculating 'compression'
         // contig repeated 5 timea should have 5*kmers in reads than average, and 5*reads going in, split in a sane way- i/e. shouldn't be 1 kmer on one in, 100 on other in, then 50/50 out
@@ -120,22 +130,20 @@ std::vector<double> CompressionAnalyzer::AnalyseRepeat(std::vector<double> repea
         auto pairs = repeat_compressions[3]-repeat_compressions[1] < repeat_compressions[4]-repeat_compressions[1] ? std::make_pair(3, 4) : std::make_pair(4, 3);
         if (std::abs(repeat_compressions[1] - repeat_compressions[std::get<0>(pairs)]) < std::abs((repeat_compressions[1] - repeat_compressions[std::get<1>(pairs)]*diff_threshold)) && std::abs(repeat_compressions[2] - repeat_compressions[std::get<1>(pairs)]) < std::abs((repeat_compressions[2] - repeat_compressions[std::get<1>(pairs)]*diff_threshold))){
             // then accprding to this arbitrary heiristic, we resolve to get 0 with pair 0
-            res.push_back(repeat_compressions[std::get<0>(pairs)]);
-            res.push_back(repeat_compressions[1] + repeat_compressions[std::get<0>(pairs)]);
+            res[0] = repeat_compressions[std::get<0>(pairs)];
+            res[1] = repeat_compressions[1] + repeat_compressions[std::get<0>(pairs)];
 
-            res.push_back(repeat_compressions[std::get<1>(pairs)]);
-            res.push_back(repeat_compressions[2] + repeat_compressions[std::get<1>(pairs)]);
+            res[2] = repeat_compressions[std::get<1>(pairs)];
+            res[3] = repeat_compressions[2] + repeat_compressions[std::get<1>(pairs)];
 
         } else {
             // if its not resolved its more useful to know how different they were
-            res.push_back(0);
-            res.push_back(repeat_compressions[1] - repeat_compressions[std::get<0>(pairs)]);
-            res.push_back(0);
-            res.push_back(repeat_compressions[2] - repeat_compressions[std::get<1>(pairs)]);
+            res[1] = repeat_compressions[1] - repeat_compressions[std::get<0>(pairs)];
+            res[3] = repeat_compressions[2] - repeat_compressions[std::get<1>(pairs)];
 
         }
-        res.push_back(in_out_sane);
-        res.push_back(repeat_count_sane);
+        res[4] = in_out_sane;
+        res[5] = repeat_count_sane;
     }
     return  res;
 
@@ -159,7 +167,7 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
 
     for (sgNodeID_t counter = 0; counter < sg.nodes.size(); counter++) {
         // lines4 pnted "kmers in node " 33 times so get info about roughly where that is
-                if (31 < count < 34){
+                if (31 < count && count < 34){
                     std::cout << "Counter: " << counter << " sg.oldnames: " << sg.oldnames[counter] << " nc " << nc.lib_name_r2 << " r1: " << nc.lib_name_r1 << " kci.read_counts.size() "<< kci.read_counts.size() << " ind: "<< nc.index << " nc.canonical_repeats.si" << nc.canonical_repeats.size() << std::endl;
                     for (auto e: sg.get_bw_links(counter)){
                         auto ind = e.dest > 0 ? e.dest : -e.dest;
@@ -168,7 +176,7 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
 
                     for (auto e: sg.get_fw_links(counter)){
                         auto ind = e.dest > 0 ? e.dest : -e.dest;
-                        std::cout << "bw " << e << " old: " << sg.oldnames[ind] << " comp: "<< kci.compute_compression_for_node(e.dest, 10, nc.index) <<  " comp e.dest " << nc.compressions[e.dest] << std::endl;
+                        std::cout << "fw " << e << " old: " << sg.oldnames[ind] << " comp: "<< kci.compute_compression_for_node(e.dest, 10, nc.index) <<  " comp e.dest " << nc.compressions[e.dest] << std::endl;
                     }
                 }
                 if (nc.compressions[counter] == -1) {
@@ -179,7 +187,6 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                         int nonzeros = 0;
                         auto bw = sg.get_bw_links(counter);
                         auto fw = sg.get_fw_links(counter);
-                        // percent present/absent doesn't do it - or not obviously, now dropped unique kmer requirement
                         for (auto b: bw) {
                             auto kci_node = kci.compute_compression_for_node(b.dest, 10, nc.index);
                             count += 1;
@@ -230,6 +237,7 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                         outfile << std::endl;
                         if (nonzeros >= 3) {
                             auto res = AnalyseRepeat(local_repeat_contig_values);
+
                             in_out_sane += res[4];
                             repeated_contig_sane += res[5];
 

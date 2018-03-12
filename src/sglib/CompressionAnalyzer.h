@@ -32,7 +32,7 @@ public:
     std::vector<NodeCompressions> compressions;
     void InitializeLib(std::string , std::string , std::string save_to="" );
     void CalculateCompressions();
-
+    void InitializeLibFromDump(std::string );
 
 private:
     void InitializeKCI();

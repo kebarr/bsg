@@ -20,7 +20,7 @@ public:
     void start_new_count();
     void add_counts_from_file(std::string filename);
 
-    void save_to_disk(std::string filename);
+    void save_to_disk(std::string filename, int lib=-1);
     void load_from_disk(std::string filename);
     void compute_compression_stats(size_t lib=0);
 

@@ -76,7 +76,11 @@ int main(int argc, char * argv[]) {
         std::cout << std::endl << "=== Loading reads compression index ===" << std::endl;
         CompressionAnalyzer ca(sg, max_mem_gb, output_prefix +"_detailed");
 
+    if (load_cidx!=""){
+        for (int lib = 0; lib < load_cidx.size(); lib++){
 
+        }
+    }
         for (int lib = 0; lib < cidxreads1.size(); lib++) {
             if (dump_cidx.size() == 0) {
                 ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
