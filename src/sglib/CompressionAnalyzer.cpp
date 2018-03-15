@@ -5,7 +5,7 @@
 #include "CompressionAnalyzer.h"
 
 
-CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb){
+CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L){
     InitializeKCI();
 
 };
@@ -16,7 +16,9 @@ void CompressionAnalyzer::InitializeLibFromDump(std::string lib_name) {
     nc.lib_name_r1 = lib_name;
     nc.lib_name_r2 = lib_name;
     nc.index= static_cast<int>(compressions.size());
+    std::cout << "loaded kci dump from file, " << lib_name << std::endl;
     kci.load_from_disk(lib_name);
+    std::cout << "loaded kci from file, " << kci.read_counts.size() << " read set dumps loaded" << std::endl;
 
 }
 
@@ -49,6 +51,9 @@ void CompressionAnalyzer::CalculateCompressions() {
 
 
 std::vector<double > CompressionAnalyzer::CompressionStats(std::vector<double> res) {
+    if (res.size() == 0 ){
+        return {0,0,0,0,0};
+    }
     auto sum = std::accumulate(res.begin(), res.end(), 0);
     double sd;
     double mean = sum / res.size();
