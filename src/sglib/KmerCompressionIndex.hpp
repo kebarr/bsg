@@ -26,13 +26,13 @@ public:
 
     void dump_histogram(std::string filename, uint16_t dataset=0);
 
-    double compute_compression_for_node(sgNodeID_t node, uint16_t max_graph_freq=10, int dataset=0);
+    std::vector<double>  compute_compression_for_node(sgNodeID_t node, uint16_t max_graph_freq=10, int dataset=0);
     SequenceGraph & sg;
     std::vector<KmerCount> graph_kmers;
     std::vector<std::vector<uint16_t>> read_counts;
     uint64_t max_mem;
     uint16_t uniq_mode=0;
-
+    std::unordered_map<uint64_t,uint64_t> kmer_map;
 };
 
 

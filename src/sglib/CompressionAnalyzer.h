@@ -44,7 +44,6 @@ private:
     uint64_t max_mem_gb;
     std::string outfile_name;
     std::string outfile_csv_name;
-
     KmerCompressionIndex kci;
 };
 

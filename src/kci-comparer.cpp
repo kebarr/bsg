@@ -78,7 +78,7 @@ int main(int argc, char * argv[]) {
 
     if (load_cidx!=""){
         for (int lib = 0; lib < load_cidx.size(); lib++){
-
+            ca.InitializeLibFromDump(std::to_string(load_cidx[lib]));
         }
     }
         for (int lib = 0; lib < cidxreads1.size(); lib++) {

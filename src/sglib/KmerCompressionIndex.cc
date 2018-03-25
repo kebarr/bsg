@@ -119,7 +119,7 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
 
     FastqReader<FastqRecord> fastqReader({0},filename);
     std::atomic<uint64_t> present(0), absent(0), rp(0);
-    std::unordered_map<uint64_t,uint64_t> kmer_map;
+
     for (uint64_t i=0;i<graph_kmers.size();++i) kmer_map[graph_kmers[i].kmer]=i;
     size_t  sum = 0;
     size_t  kmers_in_reads = 0;
@@ -175,6 +175,7 @@ void KmerCompressionIndex::add_counts_from_file(std::string filename) {
             }
         }
     }
+
     std::cout << rp << " reads processed "<< present <<" / " << present+absent << " kmers found, mean kmers in reads: " << sum/kmers_in_reads<< std::endl;
 }
 
@@ -221,7 +222,7 @@ void KmerCompressionIndex::dump_histogram(std::string filename, uint16_t dataset
     for (auto i=0;i<1000;++i) kchf<<i<<","<<covuniq[i]<<std::endl;
 }
 
-double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
+std::vector<double> KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
 
     auto & node=sg.nodes[_node>0 ? _node:-_node];
     std::vector<uint64_t> nkmers;
@@ -230,18 +231,32 @@ double KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint
     //std::cout << node.sequence << std::endl;
     int counter = 0;
 
-    uint64_t kcount=0,kcov=0;
-    //std::cout << "kmers in nodes: " << nkmers.size() << std::endl;
+    uint64_t kcount=0,kcov=0,kcountcount=0,kcountu=0,kcovu=0,kcountcountu=0, counteru=0;
+    std::cout << "kmers in node: "<< _node << ", " << nkmers.size() << std::endl;
     for (auto &kmer : nkmers){
         // find kmer in graph kmer with count > 0?
-        auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
-        if (nk!=graph_kmers.end() and nk->kmer == kmer and nk-> count > 0) {
+        // need index of kmer in hraph_kmera - must be a better eay
+
+        // n o idea what i was doing there... it copied from abive...
+        //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
+        if (graph_kmers[kmer_map[kmer]].count > 0) {
             counter +=1;
+            kcountcount += graph_kmers[kmer_map[kmer]].count;
             ++kcount;// inrement number of (unique??- now removed count = 1 ) kmers on node
-            kcov+=read_counts[dataset][nk-graph_kmers.begin()]; // inrement coverage by count for this kmer in read set
+            kcov+=read_counts[dataset][kmer_map[kmer]]; // inrement coverage by count for this kmer in read set
+        }
+        if (graph_kmers[kmer_map[kmer]].count == 1) {
+            counteru +=1;
+            kcountcountu += graph_kmers[kmer_map[kmer]].count;
+            ++kcountu;// inrement number of (unique??- now removed count = 1 ) kmers on node
+            kcovu+=read_counts[dataset][kmer_map[kmer]]; // inrement coverage by count for this kmer in read set
         }
 
     }
+    std::cout << "kcount: " << kcount << " kcov " << kcov << " kcountcount: " << kcountcount <<std::endl;
+    std::cout << "kcount: " << kcountu << " kcov " << kcovu << " kcountcount: " << kcountcountu <<std::endl;
+
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
-    return (((double) kcount) )/nkmers.size();
+    std::vector<double> res = {kcount, kcov, kcountcount,kcountu, kcovu, kcountcountu, nkmers.size()};
+    return res;
 }
