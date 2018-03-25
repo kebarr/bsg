@@ -154,19 +154,27 @@ std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<
 
         std::vector<double> res = {0, 0, 0, 0, 0, 0};
         std::cout << "in sum: " << in_sum << " out sum: " << out_sum << std::endl;
-        if (out_sum > in_sum - (1 - tolerance) * in_sum && out_sum < (1 - tolerance) * in_sum + in_sum) {
+        double ratioinout = in_sum< out_sum ? in_sum/out_sum : out_sum/in_sum;
+        std::cout << "in sum: " << in_sum << " out sum: " << out_sum <<  " ratioinout" << ratioinout <<std::endl;
+
+
+        if (ratioinout > tolerance) {
             in_out_sane = 1;
-            auto a = std::abs(out_sum - repeat_compressions[i][0]) < tolerance;
-            auto b = std::abs(in_sum - repeat_compressions[i][0]) > tolerance;
-            std::cout << " std::abs(in_sum - repeat_compressions[0]) " << std::abs(in_sum - repeat_compressions[i][0])
+            auto a = std::abs(out_sum - repeat_compressions[0][i]) < tolerance;
+            auto b = std::abs(in_sum - repeat_compressions[0][i]) > tolerance;
+            std::cout << "i: " << i << " std::abs(in_sum - repeat_compressions[0]) " << std::abs(in_sum - repeat_compressions[0][i])
                       << "> tolerance  " << b << " std::abs(out_sum - repeat_compressions[0])  "
-                      << std::abs(out_sum - repeat_compressions[i][0]) << "  < tolerance " <<
+                      << std::abs(out_sum - repeat_compressions[0][i]) << "  < tolerance " <<
                       a << std::endl;
             // not sure this actually works for way i\m calculating 'compression'
+            double ratio1 = in_sum< repeat_compressions[0][i] ? in_sum/repeat_compressions[0][i] : repeat_compressions[0][i]/in_sum;
+            double ratio2 = out_sum< repeat_compressions[0][i]? out_sum/repeat_compressions[0][i] : repeat_compressions[0][i]/out_sum;
+            std::cout << "ratio1: " << ratio1 << " ratio2: " << ratio2 << "\n std::abs(in_sum - repeat_compressions[0]) " << std::abs(in_sum - repeat_compressions[i][0])
+                      << "> tolerance  " << b << " std::abs(out_sum - repeat_compressions[0])  "
+                      << std::abs(out_sum - repeat_compressions[0][i]) << "  < tolerance " <<
+                      a << std::endl;
             // contig repeated 5 timea should have 5*kmers in reads than average, and 5*reads going in, split in a sane way- i/e. shouldn't be 1 kmer on one in, 100 on other in, then 50/50 out
-            if (std::abs(in_sum - repeat_compressions[i][0]) > tolerance &&
-                std::abs(out_sum - repeat_compressions[i][0]) < tolerance &&
-                std::abs(out_sum - repeat_compressions[i][0]) < tolerance) {
+            if (ratio1< tolerance && ratio2 < tolerance) {
                 repeat_count_sane = 1;
             }
             // in this ase check if resolves repeat, find out closest to in and see if close enough to call
@@ -300,7 +308,7 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                                 }
                             }
 
-                            nc.compressions[b.dest] = kci_node[0]/kci_node[6];
+                            nc.compressions[b.dest] = kci_node[1]/kci_node[6];
                             if (kci_node[0] > 0) nonzeros += 1;
                             repeat_contigs.push_back(ind);
                             local_repeat_contig_values.push_back(kci_node);
@@ -310,7 +318,7 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                         auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
                         count += 1;
                         if (kci_node[0] > 0) nonzeros += 1;
-                        nc.compressions[counter] = kci_node[0]/kci_node[6];
+                        nc.compressions[counter] = kci_node[1]/kci_node[6];
                         all_repeat_contig_values.push_back(kci_node);
                         local_repeat_contig_values.push_back(kci_node);
 
@@ -345,7 +353,7 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                             if (kci_node[0] > 0) nonzeros += 1;
 
 
-                            nc.compressions[ind] =  kci_node[0]/kci_node[6];
+                            nc.compressions[ind] =  kci_node[1]/kci_node[6];
                             repeat_contigs.push_back(ind);
                             all_repeat_contig_values.push_back(kci_node);
                             local_repeat_contig_values.push_back(kci_node);
@@ -410,7 +418,7 @@ for (int i=0; i < res.size() ; i++) {
                                 outfile_csv << k << ", ";
 
                         }
-                        nc.compressions[counter] =  kci_node[0]/kci_node[6];
+                        nc.compressions[counter] =  kci_node[1]/kci_node[6];
                     }
                 }
     }

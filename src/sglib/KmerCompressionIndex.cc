@@ -283,6 +283,6 @@ std::vector<double> KmerCompressionIndex::compute_compression_for_node(sgNodeID_
     std::cout << "kcount: " << kcountu << " kcov " << kcovu << " kcountcount: " << kcountcountu <<std::endl;
 
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
-    std::vector<double> res = {kcount, kcov, kcountcount,kcountu, kcovu, kcountcountu, nkmers.size()};
+    std::vector<double> res = {kcount, kcov, kcountcount,kcountu, kcovu, kcountcountu, nkmers.size(), kcov/nkmers.size()};
     return res;
 }
