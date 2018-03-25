@@ -26,10 +26,10 @@ void Scaffolder::pop_unsupported_shortbubbles() {
             if ( (sg.links[n][0].dest==sg.links[m][0].dest and sg.links[n][1].dest==sg.links[m][1].dest)
                  or (sg.links[n][1].dest==sg.links[m][0].dest and sg.links[n][0].dest==sg.links[m][1].dest)){
                 //std::cout<<"found potential short bubble between #"<<n<<" "<<sg.oldnames[n]<<" and #"<<m<<" "<<sg.oldnames[m]<<std::endl;
-                auto kcic1=kci.compute_compression_for_node(sg.links[n][0].dest);
-                auto kcic2=kci.compute_compression_for_node(sg.links[n][1].dest);
-                auto kcin=kci.compute_compression_for_node(n);
-                auto kcim=kci.compute_compression_for_node(m);
+                auto kcic1=kci.compute_compression_for_node_old(sg.links[n][0].dest);
+                auto kcic2=kci.compute_compression_for_node_old(sg.links[n][1].dest);
+                auto kcin=kci.compute_compression_for_node_old(n);
+                auto kcim=kci.compute_compression_for_node_old(m);
                 //std::cout << "kci: " << kcic1 << " -> [ " << kcin << " | " << kcim << " ] -> " << kcic1 << std::endl;
                 //TODO: de-hardcode the 20% coverage rule
                 if (kcic1>.8 and kcic1<1.2 and kcic2>.8 and kcic2<1.2){ //connections are unique
@@ -284,7 +284,7 @@ std::vector<std::pair<sgNodeID_t,sgNodeID_t>> Scaffolder::get_all_haplotype_pair
     std::pair<sgNodeID_t,sgNodeID_t> hap={0,0};
     for (auto n=1;n<sg.nodes.size();++n){
         if (used[n] or sg.nodes[n].status==sgNodeDeleted) continue;
-        auto frontkci=kci.compute_compression_for_node(n);
+        auto frontkci=kci.compute_compression_for_node_old(n);
         if (frontkci>max_c2 or frontkci<min_c2) continue;
         used[n]=true;
         auto m=n;
@@ -302,11 +302,11 @@ std::vector<std::pair<sgNodeID_t,sgNodeID_t>> Scaffolder::get_all_haplotype_pair
             auto hap0f = sg.get_fw_links(hap.first);
             auto hap1f = sg.get_fw_links(hap.second);
             if (hap0f.size() != 1 or hap1f.size() != 1 or hap0f[0].dest != hap1f[0].dest) continue;
-            auto h0kc = kci.compute_compression_for_node(hap.first);
+            auto h0kc = kci.compute_compression_for_node_old(hap.first);
             if (h0kc > max_c1 or h0kc < min_c1) continue;
-            auto h1kc = kci.compute_compression_for_node(hap.second);
+            auto h1kc = kci.compute_compression_for_node_old(hap.second);
             if (h1kc > max_c1 or h1kc < min_c1) continue;
-            auto ekc = kci.compute_compression_for_node(hap0f[0].dest);
+            auto ekc = kci.compute_compression_for_node_old(hap0f[0].dest);
             if (ekc > max_c2 or ekc < min_c2) continue;
             hps.push_back(hap);
             if (hps.size()%100==0) std::cout<<hps.size()<<" haplotype pairs found"<<std::endl;

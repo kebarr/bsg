@@ -111,18 +111,15 @@ void CompressionAnalyzer::InitializeKCI () {
 
 // can wtite and test many versions of these- e.g taking inti acoount average compression for all contigs,
 // allow for >2 repeats, vary heuristics and heristic parametes
-std::vector<double> CompressionAnalyzer::AnalyseRepeat(std::vector<std::vector<double>> repeat_compressions, double tolerance=0.95, double diff_threshold=10) {
+std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<std::vector<double>> repeat_compressions, double tolerance=0.95, double diff_threshold=10) {
     for (auto r:repeat_compressions){
         for (auto a:r) {
             std::cout << a << " ";
         }
         std::cout << std::endl;
-    }
-    for (auto r:repeat_compressions){
+  bool exit = false;
 
-        bool exit = false;
-
-    if (r.size() > 5) {
+    if (repeat_compressions.size() > 5) {
         std::cout << "repeats of more thsan 2 not yet supported " << std::endl;
 
         if (repeat_compressions.size() % 2 != 1) {
@@ -141,53 +138,69 @@ std::vector<double> CompressionAnalyzer::AnalyseRepeat(std::vector<std::vector<d
         exit = true;
     }
     if (exit)
-        return  {-1};
-    // see if repeat phased by reads- if compressions on each side pair to be reasonably close
-    // sum of compressions on each side should be a multiple of middle compression
-
-    auto in_sum = repeat_compressions[1] + repeat_compressions[2];
-    auto out_sum = repeat_compressions[3] + repeat_compressions[4];
-    double in_out_sane = 0;
-    double repeat_count_sane = 0;
-
-    std::vector<double> res = {0,0,0,0,0,0};
-    std::cout << "in sum: " << in_sum << " out sum: " <<out_sum <<std::endl;
-    if (out_sum > in_sum - (1-tolerance)*in_sum && out_sum  < (1-tolerance)*in_sum + in_sum) {
-        in_out_sane = 1;
-        auto a = std::abs(out_sum - repeat_compressions[0]) < tolerance;
-        auto b = std::abs(in_sum - repeat_compressions[0]) > tolerance;
-        std::cout << " std::abs(in_sum - repeat_compressions[0]) " << std::abs(in_sum - repeat_compressions[0]) << "> tolerance  " << b<< " std::abs(out_sum - repeat_compressions[0])  " << std::abs(out_sum - repeat_compressions[0]) << "  < tolerance " <<
-                                                                                                    a<< std::endl;
-        // not sure this actually works for way i\m calculating 'compression'
-        // contig repeated 5 timea should have 5*kmers in reads than average, and 5*reads going in, split in a sane way- i/e. shouldn't be 1 kmer on one in, 100 on other in, then 50/50 out
-        if (std::abs(in_sum - repeat_compressions[0]) > tolerance && std::abs(out_sum - repeat_compressions[0]) < tolerance && std::abs(out_sum - repeat_compressions[0]) < tolerance){
-            repeat_count_sane = 1;
-        }
-        // in this ase check if resolves repeat, find out closest to in and see if close enough to call
-        auto pairs = repeat_compressions[3]-repeat_compressions[1] < repeat_compressions[4]-repeat_compressions[1] ? std::make_pair(3, 4) : std::make_pair(4, 3);
-        if (std::abs(repeat_compressions[1] - repeat_compressions[std::get<0>(pairs)]) < std::abs((repeat_compressions[1] - repeat_compressions[std::get<1>(pairs)]*diff_threshold)) && std::abs(repeat_compressions[2] - repeat_compressions[std::get<1>(pairs)]) < std::abs((repeat_compressions[2] - repeat_compressions[std::get<1>(pairs)]*diff_threshold))){
-            // then accprding to this arbitrary heiristic, we resolve to get 0 with pair 0
-            res[0] = repeat_compressions[std::get<0>(pairs)];// compression of closest out contig to first in contig
-            res[1] = repeat_compressions[1] + repeat_compressions[std::get<0>(pairs)];// compression of both in contigs
-
-            res[2] = repeat_compressions[std::get<1>(pairs)];
-            res[3] = repeat_compressions[2] + repeat_compressions[std::get<1>(pairs)];
-
-        } else {
-            // if its not resolved its more useful to know how different they were
-            res[1] = repeat_compressions[1] - repeat_compressions[std::get<0>(pairs)];
-            res[3] = repeat_compressions[2] - repeat_compressions[std::get<1>(pairs)];
-
-        }
-        res[4] = in_out_sane;
-        res[5] = repeat_count_sane;
+        return  {{-1}};
     }
-    std::cout << "res: ";
-    for (auto r:res){
-        std::cout << r << " ";
+    std::vector<std::vector<double>> res_all;
+    for (int i=0; i <repeat_compressions.size(); i++) {
+
+        bool exit = false;
+        // see if repeat phased by reads- if compressions on each side pair to be reasonably close
+        // sum of compressions on each side should be a multiple of middle compression
+
+        auto in_sum = repeat_compressions[i][1] + repeat_compressions[i][2];
+        auto out_sum = repeat_compressions[i][3] + repeat_compressions[i][4];
+        double in_out_sane = 0;
+        double repeat_count_sane = 0;
+
+        std::vector<double> res = {0, 0, 0, 0, 0, 0};
+        std::cout << "in sum: " << in_sum << " out sum: " << out_sum << std::endl;
+        if (out_sum > in_sum - (1 - tolerance) * in_sum && out_sum < (1 - tolerance) * in_sum + in_sum) {
+            in_out_sane = 1;
+            auto a = std::abs(out_sum - repeat_compressions[i][0]) < tolerance;
+            auto b = std::abs(in_sum - repeat_compressions[i][0]) > tolerance;
+            std::cout << " std::abs(in_sum - repeat_compressions[0]) " << std::abs(in_sum - repeat_compressions[i][0])
+                      << "> tolerance  " << b << " std::abs(out_sum - repeat_compressions[0])  "
+                      << std::abs(out_sum - repeat_compressions[i][0]) << "  < tolerance " <<
+                      a << std::endl;
+            // not sure this actually works for way i\m calculating 'compression'
+            // contig repeated 5 timea should have 5*kmers in reads than average, and 5*reads going in, split in a sane way- i/e. shouldn't be 1 kmer on one in, 100 on other in, then 50/50 out
+            if (std::abs(in_sum - repeat_compressions[i][0]) > tolerance &&
+                std::abs(out_sum - repeat_compressions[i][0]) < tolerance &&
+                std::abs(out_sum - repeat_compressions[i][0]) < tolerance) {
+                repeat_count_sane = 1;
+            }
+            // in this ase check if resolves repeat, find out closest to in and see if close enough to call
+            auto pairs =
+                    repeat_compressions[i][3] - repeat_compressions[i][1] < repeat_compressions[i][4] - repeat_compressions[i][1]
+                    ? std::make_pair(3, 4) : std::make_pair(4, 3);
+            if (std::abs(repeat_compressions[i][1] - repeat_compressions[i][std::get<0>(pairs)]) <
+                std::abs((repeat_compressions[i][1] - repeat_compressions[i][std::get<1>(pairs)] * diff_threshold)) &&
+                std::abs(repeat_compressions[i][2] - repeat_compressions[i][std::get<1>(pairs)]) <
+                std::abs((repeat_compressions[i][2] - repeat_compressions[i][std::get<1>(pairs)] * diff_threshold))) {
+                // then accprding to this arbitrary heiristic, we resolve to get 0 with pair 0
+                res[0] = repeat_compressions[i][std::get<0>(pairs)];// compression of closest out contig to first in contig
+                res[1] = repeat_compressions[i][1] +
+                         repeat_compressions[i][std::get<0>(pairs)];// compression of both in contigs
+
+                res[2] = repeat_compressions[i][std::get<1>(pairs)];
+                res[3] = repeat_compressions[i][2] + repeat_compressions[i][std::get<1>(pairs)];
+
+            } else {
+                // if its not resolved its more useful to know how different they were
+                res[1] = repeat_compressions[i][1] - repeat_compressions[i][std::get<0>(pairs)];
+                res[3] = repeat_compressions[i][2] - repeat_compressions[i][std::get<1>(pairs)];
+
+            }
+            res[4] = in_out_sane;
+            res[5] = repeat_count_sane;
+        }
+        std::cout << "res: ";
+        for (auto r:res) {
+            std::cout << r << " ";
+        }
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
-    return  res;
+    return  res_all;
 
 }
 
@@ -292,14 +305,12 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                             repeat_contigs.push_back(ind);
                             local_repeat_contig_values.push_back(kci_node);
                             all_repeat_contig_values.push_back(kci_node);
-                            kci_node = 0;
 
                         }
                         auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
                         count += 1;
-                        outfile_csv << kci_node << ", ";
-                        if (kci_node > 0) nonzeros += 1;
-                        nc.compressions[counter] = kci_node;
+                        if (kci_node[0] > 0) nonzeros += 1;
+                        nc.compressions[counter] = kci_node[0]/kci_node[6];
                         all_repeat_contig_values.push_back(kci_node);
                         local_repeat_contig_values.push_back(kci_node);
 
@@ -345,18 +356,24 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                         outfile << std::endl;
                         if (nonzeros >= 3) {
                             auto res = AnalyseRepeat(local_repeat_contig_values);
+for (int i=0; i < res.size() ; i++) {
+    std::cout << i << " ";
+    in_out_sane += res[i][4];
+    repeated_contig_sane += res[i][5];
 
-                            in_out_sane += res[4];
-                            repeated_contig_sane += res[5];
+    if (res[i][0] != 0) {
+        outfile << "Resolved: ";
+        std::cout << "Resolved: ";
 
-                            if (res[0] != 0) {
-                                outfile << "Resolved: ";
-                                resolved_repeat_count += 1;
-                            }
+        resolved_repeat_count += 1;
+    }
 
-                            for (int r= 0;  r <res.size() ; r++) {
-                                outfile << r << ", ";
-                            }
+    for (int r = 0; r < res[i].size(); r++) {
+        outfile << r << ", ";
+        std::cout << r << ", ";
+
+    }
+}
                             std::cout << "repeats";
                             for (auto r: repeat_contigs){
                                 if (r < sg.oldnames.size()) {
@@ -387,8 +404,13 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
                     } else {
                         auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
                         count += 1;
-                        outfile_csv << kci_node << ", ";
-                        nc.compressions[counter] = kci_node;
+                        for (auto k:kci_node) {
+
+
+                                outfile_csv << k << ", ";
+
+                        }
+                        nc.compressions[counter] =  kci_node[0]/kci_node[6];
                     }
                 }
     }
@@ -400,24 +422,32 @@ outfile_csv << std::endl;
 std::cout << "stats for all contigs, min  " << all_stats[4]<< " max: " << all_stats[3] << " mean: "<< all_stats[2]
 <<   " stdev: " << all_stats[1]<< std::endl;
     std::vector<double > repeat_compressions;
-    auto repeat_stats = CompressionStats(repeat_contig_values);
+    /*
+    for (int i=0; i < repeat_contig_values.size() ; i++) {
+        auto repeat_stats = CompressionStats(repeat_contig_values[i]);
 
-    std::cout << "stats for all contigs in cononical repeats, min  " << repeat_stats[4]<< " max: " << repeat_stats[3] << " mean: "<< repeat_stats[2]
-              <<   " stdev: " << repeat_stats[1]<< std::endl;
+        std::cout << "stats for all contigs in cononical repeats, min  " << repeat_stats[4] << " max: "
+                  << repeat_stats[3] << " mean: " << repeat_stats[2]
+                  << " stdev: " << repeat_stats[1] << std::endl;
 
 
-    auto all_repeat_stats = CompressionStats(all_repeat_contig_values);
+        auto all_repeat_stats = CompressionStats(all_repeat_contig_values[i]);
 
 
-    std::cout << "stats for all contigs in cononical repeats, min  " << all_repeat_stats[4]<< " max: " << all_repeat_stats[3] << " mean: "<< all_repeat_stats[2]
-              <<   " stdev: " << all_repeat_stats[1]<< std::endl;
-
+        std::cout << "stats for all contigs in cononical repeats, min  " << all_repeat_stats[4] << " max: "
+                  << all_repeat_stats[3] << " mean: " << all_repeat_stats[2]
+                  << " stdev: " << all_repeat_stats[1] << std::endl;
+    }*/
     std::vector<double > all_repeat_compressions;
     for (auto r:nc.canonical_repeats) {
         // acytually repeated node always first
         repeat_compressions.push_back(nc.compressions[r[0]]);
+        std::cout << nc.compressions[r[0]] << " repeat: " << sg.oldnames[r[0]] << " "<<std::endl;
         for(auto c: r) {
             all_repeat_compressions.push_back(nc.compressions[c]);
+            std::cout << nc.compressions[c] << " repeat: " << sg.oldnames[c] << " ";
+            std::cout <<std::endl;
+
         }
     }
 

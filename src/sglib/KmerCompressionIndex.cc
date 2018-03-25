@@ -222,6 +222,32 @@ void KmerCompressionIndex::dump_histogram(std::string filename, uint16_t dataset
     for (auto i=0;i<1000;++i) kchf<<i<<","<<covuniq[i]<<std::endl;
 }
 
+double KmerCompressionIndex::compute_compression_for_node_old(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
+
+    auto & node=sg.nodes[_node>0 ? _node:-_node];
+    std::vector<uint64_t> nkmers;
+    StringKMerFactory skf(node.sequence,31);
+    skf.create_kmers(nkmers);
+    //std::cout << node.sequence << std::endl;
+    int counter = 0;
+
+    uint64_t kcount=0,kcov=0;
+    //std::cout << "kmers in nodes: " << nkmers.size() << std::endl;
+    for (auto &kmer : nkmers){
+        // find kmer in graph kmer with count > 0?
+        auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
+        if (nk!=graph_kmers.end() and nk->kmer == kmer and nk-> count > 0) {
+            counter +=1;
+            ++kcount;// inrement number of (unique??- now removed count = 1 ) kmers on node
+            kcov+=read_counts[dataset][nk-graph_kmers.begin()]; // inrement coverage by count for this kmer in read set
+        }
+
+    }
+    // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
+    return (((double) kcount) )/nkmers.size();
+}
+
+
 std::vector<double> KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
 
     auto & node=sg.nodes[_node>0 ? _node:-_node];
