@@ -37,7 +37,7 @@ public:
 private:
     void InitializeKCI();
 
-    std::vector<std::vector<double>> AnalyseRepeat(std::vector<std::vector<double>>  repeat_compressions, double tolerance=0.95, double diff_threshold=10);
+    std::vector<std::vector<double>> AnalyseRepeat(std::vector<std::vector<double>>  repeat_compressions, double tolerance=0.8, double diff_threshold=0.8);
         void Calculate(NodeCompressions & );
     std::vector<double > CompressionStats(std::vector<double> res);
         SequenceGraph &sg;
