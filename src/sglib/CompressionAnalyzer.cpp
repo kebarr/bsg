@@ -6,6 +6,17 @@
 
 
 CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L){
+    std::vector<std::string> csvs = {outfile_csv_name1,outfile_csv_name2,outfile_csv_name3,outfile_csv_name4,outfile_csv_name5,outfile_csv_name6,outfile_csv_name7};
+    for(int i=1; i <7; i++){
+        csvs[i] = outfile_prefix+std::to_string(i) + ".csv";
+    }
+    this->outfile_csv_name1 = csvs[0];
+    this->outfile_csv_name2 = csvs[1];
+    this->outfile_csv_name3 = csvs[2];
+    this->outfile_csv_name4 = csvs[3];
+    this->outfile_csv_name5 = csvs[4];
+    this->outfile_csv_name6 = csvs[5];
+    this->outfile_csv_name7 = csvs[6];
     InitializeKCI();
 
 };
@@ -97,11 +108,47 @@ void CompressionAnalyzer::InitializeKCI () {
     std::cout << "Initialization complete" << std::endl;
 
      std::ofstream outfile_csv;
+    std::ofstream outfile_csv1;
+
+    std::ofstream outfile_csv2;
+
+    std::ofstream outfile_csv3;
+    std::ofstream outfile_csv4;
+    std::ofstream outfile_csv5;
+    std::ofstream outfile_csv6;
+    std::ofstream outfile_csv7;
+
     outfile_csv.open(outfile_csv_name, std::ofstream::out );
+    outfile_csv1.open(outfile_csv_name1, std::ofstream::out );
+    outfile_csv2.open(outfile_csv_name2, std::ofstream::out );
+    outfile_csv3.open(outfile_csv_name3, std::ofstream::out );
+    outfile_csv4.open(outfile_csv_name4, std::ofstream::out );
+    outfile_csv5.open(outfile_csv_name5, std::ofstream::out );
+    outfile_csv6.open(outfile_csv_name6, std::ofstream::out );
+    outfile_csv7.open(outfile_csv_name7, std::ofstream::out );
+
     for (size_t counter = 0; counter < sg.nodes.size(); counter++) {
         outfile_csv << sg.oldnames[counter] << ", ";
+        outfile_csv1 << sg.oldnames[counter] << ", ";
+        outfile_csv2 << sg.oldnames[counter] << ", ";
+        outfile_csv3 << sg.oldnames[counter] << ", ";
+        outfile_csv4 << sg.oldnames[counter] << ", ";
+        outfile_csv5 << sg.oldnames[counter] << ", ";
+        outfile_csv6<< sg.oldnames[counter] << ", ";
+
+        outfile_csv7<< sg.oldnames[counter] << ", ";
+
     }
     outfile_csv << std::endl;
+    outfile_csv1 << std::endl;
+    outfile_csv2 << std::endl;
+    outfile_csv3 << std::endl;
+    outfile_csv4 << std::endl;
+    outfile_csv5 << std::endl;
+    outfile_csv6 << std::endl;
+    outfile_csv7 << std::endl;
+
+    std::cout << "outfile_csv_name6 " << outfile_csv_name6 << std::endl;
     if (kci.read_counts.size()>0) {
         kci.compute_compression_stats();
         kci.dump_histogram(outfile_name + "kci_histogram.csv");
@@ -112,12 +159,7 @@ void CompressionAnalyzer::InitializeKCI () {
 // can wtite and test many versions of these- e.g taking inti acoount average compression for all contigs,
 // allow for >2 repeats, vary heuristics and heristic parametes
 std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<std::vector<double>> repeat_compressions, double tolerance=0.8, double diff_threshold=0.8) {
-    std::cout << "repeat_compressions\n";
-    for (auto r:repeat_compressions){
-        for (auto a:r) {
-            std::cout << a << " ";
-        }
-        std::cout << std::endl;
+
   bool exit = false;
 
     if (repeat_compressions.size() > 5) {
@@ -138,7 +180,7 @@ std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<
         }
         exit = true;
     }
-    if (exit)
+    if (exit){
         return  {{-1}};
     }
     std::vector<std::vector<double>> res_all;
@@ -155,58 +197,42 @@ std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<
         double repeat_count_sane = 0;
 
         std::vector<double> res = {0, 0, 0, 0, 0, 0};
-        std::cout << "in sum: " << in_sum << " out sum: " << out_sum << std::endl;
         double ratioinout = in_sum< out_sum ? in_sum/out_sum : out_sum/in_sum;
-        std::cout << "in sum: " << in_sum << " out sum: " << out_sum <<  " ratioinout" << ratioinout <<std::endl;
+        std::cout << "in: " << repeat_compressions[1][i] << " " << repeat_compressions[2][i] << " in sum: " << in_sum << " out: " << repeat_compressions[3][i] << repeat_compressions[4][i] << " out sum: " << out_sum <<  " ratioinout " << ratioinout <<std::endl;
 
 
         if (ratioinout > tolerance) {
             in_out_sane = 1;
             auto a = std::abs(out_sum - repeat_compressions[0][i]) < tolerance;
             auto b = std::abs(in_sum - repeat_compressions[0][i]) > tolerance;
-            std::cout << "i: " << i << " std::abs(in_sum - repeat_compressions[0]) " << std::abs(in_sum - repeat_compressions[0][i])
-                      << "> tolerance  " << b << " std::abs(out_sum - repeat_compressions[0])  "
-                      << std::abs(out_sum - repeat_compressions[0][i]) << "  < tolerance " <<
-                      a << std::endl;
+
             // not sure this actually works for way i\m calculating 'compression'
-            double ratio1 = in_sum< repeat_compressions[0][i] ? in_sum/repeat_compressions[0][i] : repeat_compressions[0][i]/in_sum;
-            double ratio2 = out_sum< repeat_compressions[0][i]? out_sum/repeat_compressions[0][i] : repeat_compressions[0][i]/out_sum;
-            std::cout << "ratio1: " << ratio1 << " ratio2: " << ratio2 << "\n std::abs(in_sum - repeat_compressions[0]) ";
-            std::cout << std::abs(in_sum - repeat_compressions[0][i]);
-            std::cout <<         "> tolerance  " << b << " std::abs(out_sum - repeat_compressions[0])  ";
-            std::cout        << std::abs(out_sum - repeat_compressions[0][i]) << "  < tolerance " <<
-                      a << std::endl;
+            double ratio1 = in_sum < repeat_compressions[0][i] ? in_sum / repeat_compressions[0][i] :
+                            repeat_compressions[0][i] / in_sum;
+            double ratio2 = out_sum < repeat_compressions[0][i] ? out_sum / repeat_compressions[0][i] :
+                            repeat_compressions[0][i] / out_sum;
+
             // contig repeated 5 timea should have 5*kmers in reads than average, and 5*reads going in, split in a sane way- i/e. shouldn't be 1 kmer on one in, 100 on other in, then 50/50 out
-            if (ratio1> tolerance && ratio2 > tolerance) {
+            if (ratio1 > tolerance && ratio2 > tolerance) {
                 repeat_count_sane = 1;
             }
             // in this ase check if resolves repeat, find out closest to in and see if close enough to call
             auto pairs =
-                    repeat_compressions[3][i] - repeat_compressions[1][i] < repeat_compressions[4][i] - repeat_compressions[1][i]
+                    repeat_compressions[3][i] - repeat_compressions[1][i] <
+                    repeat_compressions[4][i] - repeat_compressions[1][i]
                     ? std::make_pair(3, 4) : std::make_pair(4, 3);
-            auto ratio_in_out_match1 = repeat_compressions[1][i] > repeat_compressions[std::get<0>(pairs)][i]? repeat_compressions[std::get<0>(pairs)][i]/repeat_compressions[1][i] : repeat_compressions[1][i]/repeat_compressions[std::get<0>(pairs)][i];
+            auto ratio_in_out_match1 = repeat_compressions[1][i] > repeat_compressions[std::get<0>(pairs)][i] ?
+                                       repeat_compressions[std::get<0>(pairs)][i] / repeat_compressions[1][i] :
+                                       repeat_compressions[1][i] / repeat_compressions[std::get<0>(pairs)][i];
 
-            auto ratio_in_out_match2 = repeat_compressions[2][i] > repeat_compressions[std::get<1>(pairs)][i]? repeat_compressions[std::get<1>(pairs)][i]/repeat_compressions[2][i] : repeat_compressions[2][i]/repeat_compressions[std::get<1>(pairs)][i];
-            std::cout << "ratio_in_out_match1: " << ratio_in_out_match1 << " ratio_in_out_match1:" << ratio_in_out_match2
-                    << "std::abs(repeat_compressions[1][i] - repeat_compressions[std::get<0>(pairs)][i])\n "
-                      << std::abs(repeat_compressions[1][i] - repeat_compressions[std::get<0>(pairs)][i])
-                    <<"\n repeat_compressions[1][i]/repeat_compressions[std::get<0>(pairs)][i]\n"
-                    << repeat_compressions[1][i]/repeat_compressions[std::get<0>(pairs)][i]
-                    <<"\n repeat_compressions[1][i]/repeat_compressions[std::get<1>(pairs)][i]\n"
-                    << repeat_compressions[1][i]/repeat_compressions[std::get<1>(pairs)][i]
-                    <<"\n repeat_compressions[2][i]/repeat_compressions[std::get<0>(pairs)][i]\n"
-                    << repeat_compressions[2][i]/repeat_compressions[std::get<0>(pairs)][i]
-                    <<"\n repeat_compressions[2][i]/repeat_compressions[std::get<1>(pairs)][i]\n"
-                    << repeat_compressions[2][i]/repeat_compressions[std::get<1>(pairs)][i]
-                      << " \n<< std::abs(repeat_compressions[1][i] - repeat_compressions[std::get<1>(pairs)][i])\n " << std::abs(repeat_compressions[1][i] - repeat_compressions[std::get<1>(pairs)][i])<< " std::abs((repeat_compressions[1][i] - repeat_compressions[std::get<1>(pairs)][i] * diff_threshold)) \n "
-                      << std::abs((repeat_compressions[1][i] - repeat_compressions[std::get<1>(pairs)][i] * diff_threshold)) << "\nstd::abs(repeat_compressions[2][i] - repeat_compressions[std::get<1>(pairs)][i]) \n" << std::abs(repeat_compressions[2][i] - repeat_compressions[std::get<1>(pairs)][i])
-                      << " \nstd::abs((repeat_compressions[2][i] - repeat_compressions[std::get<1>(pairs)][i] * diff_threshold))) \n"
-                      << std::abs((repeat_compressions[2][i] - repeat_compressions[std::get<1>(pairs)][i] * diff_threshold))
-                      << "\n << std::abs((repeat_compressions[2][i] - repeat_compressions[std::get<1>(pairs)][i] ) \n"<< std::abs(repeat_compressions[2][i] - repeat_compressions[std::get<0>(pairs)][i]) << "\n";
+            auto ratio_in_out_match2 = repeat_compressions[2][i] > repeat_compressions[std::get<1>(pairs)][i] ?
+                                       repeat_compressions[std::get<1>(pairs)][i] / repeat_compressions[2][i] :
+                                       repeat_compressions[2][i] / repeat_compressions[std::get<1>(pairs)][i];
 
-            if ( ratio_in_out_match1 > diff_threshold && ratio_in_out_match2 > diff_threshold) {
+            if (ratio_in_out_match1 > diff_threshold && ratio_in_out_match2 > diff_threshold) {
                 // then accprding to this arbitrary heiristic, we resolve to get 0 with pair 0
-                res[0] = repeat_compressions[std::get<0>(pairs)][i];// compression of closest out contig to first in contig
+                res[0] = repeat_compressions[std::get<0>(
+                        pairs)][i];// compression of closest out contig to first in contig
                 res[1] = repeat_compressions[1][i] +
                          repeat_compressions[std::get<0>(pairs)][i];// compression of both in contigs
 
@@ -221,12 +247,14 @@ std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<
             }
             res[4] = in_out_sane;
             res[5] = repeat_count_sane;
+
+            std::cout << "res" << i << ": ";
+            for (auto r:res) {
+                std::cout << r << " ";
+            }
+
+            std::cout << std::endl;
         }
-        std::cout << "res: ";
-        for (auto r:res) {
-            std::cout << r << " ";
-        }
-        std::cout << std::endl;
         res_all.push_back(res);
     }
     return  res_all;
@@ -238,8 +266,29 @@ void CompressionAnalyzer::Calculate(NodeCompressions & nc){
     std::cout << "calculating compressions of " << nc.lib_name_r1 << " and " << nc.lib_name_r2 << " writing to " << outfile_name<< std::endl;
     std::ofstream outfile;
    outfile.open(outfile_name, std::ofstream::out |std::ofstream::app);
-    std::ofstream outfile_csv;
+    std::ofstream outfile_csv,outfile_csv1, outfile_csv2,outfile_csv3,outfile_csv4,outfile_csv5,outfile_csv6,outfile_csv7;
     outfile_csv.open(outfile_csv_name, std::ofstream::out |std::ofstream::app);
+    outfile_csv1.open(outfile_csv_name1, std::ofstream::out |std::ofstream::app);
+    outfile_csv2.open(outfile_csv_name2, std::ofstream::out |std::ofstream::app);
+    outfile_csv3.open(outfile_csv_name3, std::ofstream::out |std::ofstream::app);
+    outfile_csv4.open(outfile_csv_name4, std::ofstream::out |std::ofstream::app);
+    outfile_csv5.open(outfile_csv_name5, std::ofstream::out |std::ofstream::app);
+    outfile_csv6.open(outfile_csv_name6, std::ofstream::out |std::ofstream::app);
+    outfile_csv7.open(outfile_csv_name7, std::ofstream::out |std::ofstream::app);
+
+    std::vector<std::ofstream> csvs;
+        csvs.push_back(std::move(outfile_csv));
+    csvs.push_back(std::move(outfile_csv1));
+
+    csvs.push_back(std::move(outfile_csv2));
+    csvs.push_back(std::move(outfile_csv3));
+    csvs.push_back(std::move(outfile_csv4));
+    csvs.push_back(std::move(outfile_csv5));
+    csvs.push_back(std::move(outfile_csv6));
+    csvs.push_back(std::move(outfile_csv7));
+
+   // = {outfile_csv, outfile_csv1,outfile_csv2, outfile_csv3, outfile_csv4, outfile_csv5, outfile_csv6};
+
     std::vector<std::vector<double > >repeat_contig_values;
     std::vector<std::vector<double > > all_repeat_contig_values;
     std::vector<sgNodeID_t > repeat_contigs = {};
@@ -251,29 +300,7 @@ std::vector<sgNodeID_t > resolved_repeat_indices;
     std::map<int, int> resolved_repeat_count ={{0,0},{1,0},{2,0},{3,0},{4,0},{5,0},{6,0},{7,0}};
     std::map<int, int>  in_out_sane ={{0,0},{1,0},{2,0},{3,0},{4,0},{5,0},{6,0},{7,0}};
     std::map<int, int> repeated_contig_sane ={{0,0},{1,0},{2,0},{3,0},{4,0},{5,0},{6,0},{7,0}};
-    for (auto i= 1 ; i < sg.links.size() ; i++){
-        if (i < sg.oldnames.size()){
-            std::cout << sg.links[i].size() << ": " << sg.oldnames[i] << " ";
-        } else {
-            std::cout << sg.links[i].size() << " i: " << i;
-        }
-        std::cout << " fw: " << sg.get_fw_links(i).size() << " bw: " << sg.get_bw_links(i).size() << std::endl;
-        for (auto n:sg.links[i]) {
-            if (n.source < sg.oldnames.size()){
-            std::cout     << sg.oldnames[n.source > 0 ? n.source : - n.source ];
-            } else {
-                std::cout  << n.source    <<     "no aource ";
-            }
-            if (n.dest < sg.oldnames.size()){
-                std::cout     << " d: " << sg.oldnames[n.dest];
-            } else {
-                std::cout   << n.dest  <<     "no dest ";
-            }
-            std::cout     << ", ";
-        }
-        std::cout     << std::endl;
-    }
-    std::cout << "nc.compressionssize " << nc.compressions.size() << std::endl;
+
     for (sgNodeID_t counter = 1; counter < sg.nodes.size(); counter++) {
         /*std::cout << "Counter: " << counter  << std::endl;
         std::cout << "nc.compressionssize " << nc.compressions.size() << std::endl;
@@ -288,78 +315,43 @@ std::vector<sgNodeID_t > resolved_repeat_indices;
 */
         // lines4 pnted "kmers in node " 33 times so get info about roughly where that is
                     //std::cout << "Counter: " << counter << " sg.oldnames: " << sg.oldnames[counter] << " nc " << nc.lib_name_r2 << " r1: " << nc.lib_name_r1 << " kci.read_counts.size() "<< kci.read_counts.size() << " ind: "<< nc.index << " nc.canonical_repeats.si" << nc.canonical_repeats.size() << std::endl;
-                    for (auto e: sg.get_bw_links(counter)){
-                        auto ind = e.dest > 0 ? e.dest : -e.dest;
-                        /*std::cout << "bw " << e << " old: " << sg.oldnames[ind] <<  " comp e.dest " << nc.compressions[e.dest] << std::endl;
-                        for (auto a: kci.compute_compression_for_node(e.dest, 10, nc.index) ){
-                            std::cout << a << ",  ";
-                        }
-                        std::cout << std::endl;*/
-                    }
-
-                    for (auto e: sg.get_fw_links(counter)){
-                        auto ind = e.dest > 0 ? e.dest : -e.dest;
-                        std::cout << "fw " << e << " old: " << sg.oldnames[ind] <<   " comp e.dest " << nc.compressions[e.dest] << std::endl;
-                        for (auto a: kci.compute_compression_for_node(e.dest, 10, nc.index)){
-                            std::cout << a << ",  ";
-                        }
-                        std::cout << std::endl;
-                    }
 
 
-                if (nc.compressions[counter] == -1) {
+        std::vector<std::vector<double > >local_repeat_contig_values;
+
+        auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
+        int nonzeros = 0;
+        if (kci_node[0] > 0) nonzeros += 1;
+        all_repeat_contig_values.push_back(kci_node);
+        int c = 0;// always record kci in csv
+        for (auto k: kci_node) {
+            csvs[c] << k << ", ";
+            c+=1;
+        }
+        local_repeat_contig_values.push_back(kci_node);
+
+
+        if (nc.compressions[counter] == -1) {
+
                     if (sg.is_canonical_repeat(counter)) {
+                        count += 1;
+
                         repeats += 1;
                         std::vector<sgNodeID_t > repeat_contigs = {counter};
-                        std::vector<std::vector<double > >local_repeat_contig_values;
-                        int nonzeros = 0;
+
                         auto bw = sg.get_bw_links(counter);
                         auto fw = sg.get_fw_links(counter);
-                        auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
-                        count += 1;
-                        if (kci_node[0] > 0) nonzeros += 1;
-                        nc.compressions[counter] = kci_node[1]/kci_node[6];
-                        all_repeat_contig_values.push_back(kci_node);
-                        local_repeat_contig_values.push_back(kci_node);
-                        std::cout << "node: " << sg.oldnames[counter] << " ";
-                        for (auto k: kci_node) {
-                            outfile_csv << k << ", ";
-                            if (counter < sg.oldnames.size()) {
-                                outfile << sg.oldnames[counter] << ": " << k<< ", "
-                                        << sg.nodes[counter].sequence.size() << ", ";
-                                std::cout<< sg.oldnames[counter] << ": " << k<< ", "
-                                         << sg.nodes[counter].sequence.size() << ", ";
-                            } else {
-                                outfile << counter << " no old name: " << k<< ", "
-                                        << sg.nodes[counter].sequence.size() << ", ";
-                                std::cout << counter << " no old name: " << k<< ", "
-                                          << sg.nodes[counter].sequence.size() << ", ";
-                            }
-                        }
-                        outfile << std::endl;
-                        std::cout << std::endl;
+
                         for (auto b: bw) {
                             auto kci_node = kci.compute_compression_for_node(b.dest, 10, nc.index);
                             count += 1;
 
                             auto ind = b.dest > 0 ? b.dest : -b.dest;
                             std::cout << "node: " << sg.oldnames[ind] << " ";
-
+int c=0;
                             for (auto k: kci_node) {
-                                outfile_csv << k << ", ";
-                                if (ind < sg.oldnames.size()) {
-                                    outfile << sg.oldnames[ind] << ": " << k << ", "
-                                            << sg.nodes[ind].sequence.size() << ", ";
-
-                                    std::cout<< sg.oldnames[counter] << ": " << k<< ", "
-                                             << sg.nodes[counter].sequence.size() << ", ";
-                                } else {
-                                    outfile << ind << " no old name: " << k << ", "
-                                            << sg.nodes[ind].sequence.size() << ", ";
-
-                                    std::cout << counter << " no old name: " << k<< ", "
-                                              << sg.nodes[counter].sequence.size() << ", ";
-                                }
+                                csvs[c] << k << ", ";
+                                c+=1;
                             }
 
                             nc.compressions[b.dest] = kci_node[1]/kci_node[6];
@@ -378,24 +370,11 @@ std::vector<sgNodeID_t > resolved_repeat_indices;
                             auto kci_node = kci.compute_compression_for_node(f.dest, 10, nc.index);
                             count += 1;
                             auto ind = f.dest > 0 ? f.dest : -f.dest;
-                            std::cout << "node: " << sg.oldnames[ind] << " ";
-
+int c=0;
                             for (auto k: kci_node) {
+                                csvs[c] << k << ", ";
 
-                                outfile_csv << k << ", ";
-                                if (ind < sg.oldnames.size()) {
-                                    outfile << sg.oldnames[ind] << ": " << k << ", "
-                                            << sg.nodes[ind].sequence.size() << ", ";
-                                    std::cout<< sg.oldnames[counter] << ": " << k<< ", "
-                                             << sg.nodes[counter].sequence.size() << ", ";
-
-                                } else {
-                                    outfile << ind << " no old name: " << k << ", "
-                                            << sg.nodes[ind].sequence.size() << ", ";
-
-                                    std::cout << counter << " no old name: " << k<< ", "
-                                              << sg.nodes[counter].sequence.size() << ", ";
-                                }
+                                c+=1;
                             }
                             if (kci_node[0] > 0) nonzeros += 1;
 
@@ -411,27 +390,33 @@ std::vector<sgNodeID_t > resolved_repeat_indices;
                         outfile << std::endl;
                         if (nonzeros >= 3) {
                             auto res = AnalyseRepeat(local_repeat_contig_values);
-for (int i=0; i < res.size() ; i++) {
-    std::cout << i << " ";
+for (int i=0; i < res.size() ; i++) {// i is index of node
+
     in_out_sane[i] += res[i][4];
     repeated_contig_sane[i] += res[i][5];
-    resolved_repeat_indices.push_back(counter);
     if (res[i][0] != 0) {
-        outfile << "\nResolved: " << i << "  "<< metrics[i] << " ";
-        std::cout << "\nResolved: " << i << " "<< metrics[i] << " ";
+        outfile << i << ": ";
+        std::cout << i << ": ";
+        resolved_repeat_indices.push_back(counter);
 
+        outfile << "\nResolved: " << i << "  " << metrics[i] << " ";
+        std::cout << "\nResolved: " << i << " " << metrics[i] << " ";
+
+
+        outfile << std::endl;
+        std::cout << std::endl;
         resolved_repeat_count[i] += 1;
-    }
-    outfile << std::endl;
-    std::cout << std::endl;
-    for (int r = 0; r < res[i].size(); r++) {
-        outfile << res[i][r] << ", ";
-        std::cout << res[i][r] << ", ";
 
-    }
+        for (int r = 0; r < res[i].size(); r++) {
+            outfile << metrics[r] << ": " << res[i][r] << ", ";
+            std::cout << metrics[r] << ": " << res[i][r] << ", ";
 
-    outfile << std::endl;
-    std::cout << std::endl;
+        }
+
+
+        outfile << std::endl;
+        std::cout << std::endl;
+    }
 }
                             std::cout << "repeats";
                             for (auto r: repeat_contigs){
@@ -444,14 +429,11 @@ for (int i=0; i < res.size() ; i++) {
                                 }
                             }
 
-                            std::cout << std::endl << "  nc.canonical_repeats " <<  nc.canonical_repeats.size() << std::endl ;
                             nc.canonical_repeats.push_back({});
-                            //std::cout << "  nc.canonical_repeats 2 " <<  nc.canonical_repeats.size() << std::endl ;
 
                             for (auto r: repeat_contigs){
                                 nc.canonical_repeats.back().push_back(r);
                             }
-                            std::cout << "  nc.canonical_repeats 3 " <<  nc.canonical_repeats.size() << std::endl ;
                                       //
                             canonical.push_back(repeat_contigs);
                         } else {
@@ -459,23 +441,21 @@ for (int i=0; i < res.size() ; i++) {
                         }
                         outfile << std::endl;
 
-                        local_repeat_contig_values.clear();
-                    } else {
-                        auto kci_node = kci.compute_compression_for_node(counter, 10, nc.index);
-                        count += 1;
-                        for (auto k:kci_node) {
 
-
-                                outfile_csv << k << ", ";
-
-                        }
-                        nc.compressions[counter] =  kci_node[1]/kci_node[6];
                     }
                 }
-    }
+        nc.compressions[counter] = kci_node[1]/kci_node[6];
 
-outfile_csv << std::endl;
-    std::cout << "nc.compressionssize " << nc.compressions.size() << " counter " << sg.nodes.size() << " count " << count  <<std::endl;
+        local_repeat_contig_values.clear();
+    }
+    outfile_csv << std::endl;
+    outfile_csv1 << std::endl;
+    outfile_csv2 << std::endl;
+    outfile_csv3 << std::endl;
+    outfile_csv4 << std::endl;
+    outfile_csv5 << std::endl;
+    outfile_csv6 << std::endl;
+
     auto all_stats = CompressionStats(nc.compressions);//  {sum, sd, mean, *max, *min};
 
 std::cout << "stats for all contigs, min  " << all_stats[4]<< " max: " << all_stats[3] << " mean: "<< all_stats[2]
@@ -501,13 +481,14 @@ std::cout << "stats for all contigs, min  " << all_stats[4]<< " max: " << all_st
     for (auto r:nc.canonical_repeats) {
         // acytually repeated node always first
         repeat_compressions.push_back(nc.compressions[r[0]]);
-        std::cout << nc.compressions[r[0]] << " repeat: " << sg.oldnames[r[0]] << " "<<std::endl;
+        std::cout << "repeated: " << sg.oldnames[r[0]];
         for(auto c: r) {
             all_repeat_compressions.push_back(nc.compressions[c]);
-            std::cout << nc.compressions[c] << " repeat: " << sg.oldnames[c] << " ";
-            std::cout <<std::endl;
+            std::cout << sg.oldnames[c] << " " << nc.compressions[c] ;
+
 
         }
+        std::cout <<std::endl;
     }
 
 

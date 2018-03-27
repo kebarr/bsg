@@ -258,7 +258,7 @@ std::vector<double> KmerCompressionIndex::compute_compression_for_node(sgNodeID_
     int counter = 0;
 
     uint64_t kcount=0,kcov=0,kcountcount=0,kcountu=0,kcovu=0,kcountcountu=0, counteru=0;
-    std::cout << "kmers in node: "<< _node << ", " << nkmers.size() << std::endl;
+    //std::cout << "kmers in node: "<< _node << ", " << nkmers.size() << std::endl;
     for (auto &kmer : nkmers){
         // find kmer in graph kmer with count > 0?
         // need index of kmer in hraph_kmera - must be a better eay
@@ -279,8 +279,7 @@ std::vector<double> KmerCompressionIndex::compute_compression_for_node(sgNodeID_
         }
 
     }
-    std::cout << "kcount: " << kcount << " kcov " << kcov << " kcountcount: " << kcountcount <<std::endl;
-    std::cout << "kcount: " << kcountu << " kcov " << kcovu << " kcountcount: " << kcountcountu <<std::endl;
+    //std::cout << "kcount: " << kcount << " kcov " << kcov << " kcountcount: " << kcountcount << " kcountu: " << kcountu << " kcovu " << kcovu << " kcountcountu: " << kcountcountu <<std::endl;
 
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
     std::vector<double> res = {kcount, kcov, kcountcount,kcountu, kcovu, kcountcountu, nkmers.size(), kcov/nkmers.size()};

@@ -103,7 +103,6 @@ bool SequenceGraph::is_canonical_repeat(sgNodeID_t n){
 std::vector<Link> SequenceGraph::get_fw_links( sgNodeID_t n){
     std::vector<Link> r;
     for (auto &l:links[(n>0 ? n : -n)]) if (l.source==-n) r.emplace_back(l);
-    std::cout << r.size() << "r size, n " << n  << std::endl;
     return r;
 }
 
