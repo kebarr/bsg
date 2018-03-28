@@ -17,7 +17,7 @@ int main(int argc, char * argv[]) {
     //std::cout << "Git origin: " << GIT_ORIGIN_URL << " -> "  << GIT_BRANCH << std::endl;
     //std::cout << "Git commit: " << GIT_COMMIT_HASH << std::endl<<std::endl;
 
-    std::string gfa_filename, output_prefix, load_cidx, gfa_list, assembly_list;
+    std::string gfa_filename, output_prefix, load_cidx, gfa_list, assembly_list, mode;
     std::vector<std::string> reads1, reads2, reads_type, dump_mapped, load_mapped, cidxreads1, cidxreads2, dump_cidx;
     bool stats_only = 0;
     uint64_t max_mem_gb = 4;
@@ -34,6 +34,9 @@ int main(int argc, char * argv[]) {
                  cxxopts::value<std::vector<std::string>>(cidxreads1))
                 ("cidxread2", "compression index input reads, right",
                  cxxopts::value<std::vector<std::string>>(cidxreads2))
+
+                ("mode", "kci mode",
+                 cxxopts::value<std::string>(mode))
                 ("load_cidx", "load compression index filename", cxxopts::value<std::string>(load_cidx))
                 ("dump_cidx", "dump compression index filename", cxxopts::value<std::vector<std::string>>(dump_cidx))
                 ("max_mem", "maximum_memory when mapping (GB, default: 4)", cxxopts::value<uint64_t>(max_mem_gb))
@@ -91,7 +94,7 @@ int main(int argc, char * argv[]) {
             outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
 
         }
-    ca.CalculateCompressions();
+    ca.CalculateCompressions(mode=mode);
 
     }
 

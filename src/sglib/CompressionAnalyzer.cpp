@@ -52,11 +52,11 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
 
 };
 
-void CompressionAnalyzer::CalculateCompressions() {
+void CompressionAnalyzer::CalculateCompressions(std::string mode="analytic") {
     std::cout << "Calvulating compressions for each of " << compressions.size() << " read sets" << std::endl;
 
     for (auto &nc:compressions) {
-        Calculate(nc);
+        Calculate(nc, mode=mode);
     }
 
     for (auto &nc:compressions) {
@@ -262,7 +262,7 @@ std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<
 }
 
 
-void CompressionAnalyzer::Calculate(NodeCompressions & nc){
+void CompressionAnalyzer::Calculate(NodeCompressions & nc, std::string mode="analytic"){
     std::cout << "calculating compressions of " << nc.lib_name_r1 << " and " << nc.lib_name_r2 << " writing to " << outfile_name<< std::endl;
     std::ofstream outfile;
    outfile.open(outfile_name, std::ofstream::out |std::ofstream::app);
@@ -388,7 +388,7 @@ int c=0;
 
                         }
                         outfile << std::endl;
-                        if (nonzeros >= 3) {
+                        if (nonzeros >= 3 && mode =="analytic") {
                             auto res = AnalyseRepeat(local_repeat_contig_values);
 for (int i=0; i < res.size() ; i++) {// i is index of node
 

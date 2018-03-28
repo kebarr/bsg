@@ -31,14 +31,14 @@ public:
 
     std::vector<NodeCompressions> compressions;
     void InitializeLib(std::string , std::string , std::string save_to="" );
-    void CalculateCompressions();
+    void CalculateCompressions(std::string mode="analytic");
     void InitializeLibFromDump(std::string );
 
 private:
     void InitializeKCI();
 
     std::vector<std::vector<double>> AnalyseRepeat(std::vector<std::vector<double>>  repeat_compressions, double tolerance=0.8, double diff_threshold=0.8);
-        void Calculate(NodeCompressions & );
+        void Calculate(NodeCompressions & , std::string mode="analytic");
     std::vector<double > CompressionStats(std::vector<double> res);
         SequenceGraph &sg;
     uint64_t max_mem_gb;
