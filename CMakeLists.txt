@@ -150,7 +150,7 @@ add_library(sequence_graph SHARED
             src/sglib/GraphPartitioner.cc
             src/sglib/logger/OutputLog.cc
         src/sglib/CompressionAnalyzer.cpp
-            )
+        src/sglib/RepeatAnalyzer.cpp src/sglib/RepeatAnalyzer.h)
 
 target_link_libraries(sequence_graph ${DEPENDENCY_LIBS})
 
@@ -205,7 +205,7 @@ add_executable(phaser
                src/phaser.cpp)
 
 add_executable(gfa-align
-               src/gfa-align.cc)
+               src/gfa-align.cc src/repeat-analysis.cpp)
 
 add_executable(kc_comp
                src/comp_kc.cc)
@@ -216,6 +216,7 @@ add_executable(seq-sorter
 add_executable(kci-comparer
         src/kci-comparer.cpp src/sglib/CompressionAnalyzer.cpp src/sglib/CompressionAnalyzer.h)
 
+add_executable(repeat-analysis src/repeat-analysis.cpp src/repeat-analysis.cpp src/sglib/RepeatAnalyzer.cpp src/sglib/RepeatAnalyzer.h)
 
 add_executable(map-lr
                src/map-lr.cc)
@@ -233,6 +234,8 @@ target_link_libraries (kci-comparer sequence_graph ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(phaser sequence_graph ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(map-lr sequence_graph ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(gfa-extract sequence_graph)
+target_link_libraries(repeat-analysis sequence_graph)
+
 
 IF(BUILD_TESTING)
     add_executable(runBasicTests tests/sglib/basic_check.cc)

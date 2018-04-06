@@ -1,3 +1,7 @@
+//
+// Created by Katie Barr (EI) on 06/04/2018.
+//
+
 #include <iostream>
 #include <fstream>
 #include <sglib/PairedReadMapper.h>
@@ -7,6 +11,7 @@
 #include "sglib/SequenceGraph.h"
 #include "cxxopts.hpp"
 #include <sglib/CompressionAnalyzer.h>
+#include <sglib/RepeatAnalyzer.h>
 
 
 
@@ -21,14 +26,22 @@ int main(int argc, char * argv[]) {
     std::vector<std::string> reads1, reads2, reads_type, dump_mapped, load_mapped, cidxreads1, cidxreads2, dump_cidx;
     bool stats_only = 0;
     uint64_t max_mem_gb = 4;
+    int number_repeats = 10, in_min=3000, out_min=3000,  rep_min=3000;
 
     try {
-        cxxopts::Options options("kci-comparer", "Compare kmer compression indices from read and contig data");
+        cxxopts::Options options("repeat-analyser", "Compare kmer compression indices from read and contig data");
 
         options.add_options()
                 ("help", "Print help")
                 ("g,gfa", "input gfa file list", cxxopts::value<std::string>(gfa_filename))
                 ("o,output", "output file prefix", cxxopts::value<std::string>(output_prefix));
+        options.add_options("Repeat analysis options")
+                ("repeats", "number of repeats to find", cxxopts::value<int>(number_repeats))
+                ("in_min", "minimum number of bases n in contigs",  cxxopts::value<int>(in_min))
+
+                ("out_min", "minimum number of bases n in contigs",  cxxopts::value<int>(out_min))
+                ("rep_min", "minimum number of bases n in contigs",  cxxopts::value<int>(rep_min));
+
         options.add_options("Compression Index Options")
                 ("cidxread1", "compression index input reads, left",
                  cxxopts::value<std::vector<std::string>>(cidxreads1))
@@ -39,8 +52,7 @@ int main(int argc, char * argv[]) {
                  cxxopts::value<std::string>(mode))
                 ("load_cidx", "load compression index filename", cxxopts::value<std::string>(load_cidx))
                 ("dump_cidx", "dump compression index filename", cxxopts::value<std::vector<std::string>>(dump_cidx))
-                ("max_mem", "maximum_memory when mapping (GB, default: 4)", cxxopts::value<uint64_t>(max_mem_gb))
-                ("gfa_list", "list of gfas for compairson", cxxopts::value<std::string>(gfa_list));
+                ("max_mem", "maximum_memory when mapping (GB, default: 4)", cxxopts::value<uint64_t>(max_mem_gb));
 
 
         auto result(options.parse(argc, argv));
@@ -74,29 +86,20 @@ int main(int argc, char * argv[]) {
     for (auto i = 0; i < argc; i++) std::cout << argv[i] << " ";
     std::cout << std::endl << std::endl;
 
-        auto fasta_filename = gfa_filename.substr(0, gfa_filename.size() - 4) + ".fasta";
-        SequenceGraph sg;
-        sg.load_from_gfa(gfa_filename);
+    auto fasta_filename = gfa_filename.substr(0, gfa_filename.size() - 4) + ".fasta";
+    SequenceGraph sg;
+    sg.load_from_gfa(gfa_filename);
+    CompressionAnalyzer ca(sg, max_mem_gb, output_prefix +"_detailed");
 
-        std::cout << std::endl << "=== Loading reads compression index ===" << std::endl;
-        CompressionAnalyzer ca(sg, max_mem_gb, output_prefix +"_detailed");
-
-    if (load_cidx!=""){
-        for (int lib = 0; lib < load_cidx.size(); lib++){
-            ca.InitializeLibFromDump(std::to_string(load_cidx[lib]));
+    for (int lib = 0; lib < cidxreads1.size(); lib++) {
+        if (dump_cidx.size() == 0) {
+            ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
+        } else {
+            ca.InitializeLib(cidxreads1[lib], cidxreads2[lib], dump_cidx[lib]);
         }
-    }
-        for (int lib = 0; lib < cidxreads1.size(); lib++) {
-            if (dump_cidx.size() == 0) {
-                ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
-            } else {
-                ca.InitializeLib(cidxreads1[lib], cidxreads2[lib], dump_cidx[lib]);
-            }
 
-            outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
-
-        }
-    ca.CalculateCompressions(mode=mode);
+        outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
 
     }
+}
 

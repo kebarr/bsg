@@ -222,6 +222,54 @@ void KmerCompressionIndex::dump_histogram(std::string filename, uint16_t dataset
     for (auto i=0;i<1000;++i) kchf<<i<<","<<covuniq[i]<<std::endl;
 }
 
+
+
+double KmerCompressionIndex::compute_compression_for_unique_node(sgNodeID_t _node, uint16_t max_graph_freq) {
+    const int k=31;
+    auto n=_node>0 ? _node:-_node;
+    auto & node=sg.nodes[n];
+
+    //eliminate "overlapping" kmers
+    int32_t max_bw_ovlp=0;
+    int32_t max_fw_ovlp=0;
+    for (auto bl:sg.get_bw_links(n)) {
+        if (bl.dist<0){
+            auto ovl=-bl.dist+1-k;
+            if (ovl>max_bw_ovlp) max_bw_ovlp=ovl;
+        }
+    }
+    for (auto fl:sg.get_fw_links(n)) {
+        if (fl.dist<0){
+            auto ovl=-fl.dist+1-k;
+            if (ovl>max_fw_ovlp) max_fw_ovlp=ovl;
+        }
+    }
+    int64_t newsize=node.sequence.size();
+    newsize=newsize-max_bw_ovlp-max_fw_ovlp;
+    //if (n/10==50400){
+    //    std::cout<<"node "<<n<<" size="<<node.sequence.size()<<" max_bw_olv="<<max_bw_ovlp<<" max_fw_ovl="<<max_fw_ovlp<<" newlength="<<newsize<<std::endl;
+    //}
+    if (newsize<k) return ((double)0/0);
+    auto s=node.sequence.substr(max_bw_ovlp,newsize);
+    std::vector<uint64_t> nkmers;
+    StringKMerFactory skf(s,k);
+
+
+    skf.create_kmers(nkmers);
+
+    uint64_t kcount=0,kcov=0;
+    for (auto &kmer : nkmers){
+        auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
+        if (nk!=graph_kmers.end() and nk->kmer == kmer and nk->count<=max_graph_freq) {
+            kcount+=nk->count;
+            kcov+=read_counts[0][nk-graph_kmers.begin()];
+        }
+    }
+
+    return (((double) kcov)/kcount )/uniq_mode;
+}
+
+
 double KmerCompressionIndex::compute_compression_for_node_old(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
 
     auto & node=sg.nodes[_node>0 ? _node:-_node];
@@ -265,7 +313,7 @@ std::vector<double> KmerCompressionIndex::compute_compression_for_node(sgNodeID_
 
         // n o idea what i was doing there... it copied from abive...
         //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
-        if (graph_kmers[kmer_map[kmer]].count > 0) {
+        if (graph_kmers[kmer_map[kmer]].count > 0) {// should scale non uniwue kmers by number occurnces in graph
             counter +=1;
             kcountcount += graph_kmers[kmer_map[kmer]].count;
             ++kcount;// inrement number of (unique??- now removed count = 1 ) kmers on node

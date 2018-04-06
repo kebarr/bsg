@@ -52,7 +52,7 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
 
 };
 
-void CompressionAnalyzer::CalculateCompressions(std::string mode="analytic") {
+void CompressionAnalyzer::CalculateCompressions(std::string mode="analytic"  ) {
     std::cout << "Calvulating compressions for each of " << compressions.size() << " read sets" << std::endl;
 
     for (auto &nc:compressions) {
