@@ -13,6 +13,8 @@
 #include <numeric>
 #include <sglib/KmerCompressionIndex.hpp>
 
+#include <sglib/RepeatAnalyzer.h>
+
 
 struct NodeCompressions {
     std::string lib_name_r1;
@@ -24,12 +26,21 @@ struct NodeCompressions {
     std::vector<std::vector<sgNodeID_t >> canonical_repeats;
 };
 
+/*
+struct Repeat{
+    sgNodeID_t repeat;
+    std::vector<sgNodeID_t> in;
+    std::vector<sgNodeID_t> out;
+    int degree;
+};*/
+
 
 class CompressionAnalyzer {
 public:
     CompressionAnalyzer(SequenceGraph &, uint64_t,  std::string);
 
     std::vector<NodeCompressions> compressions;
+    std::vector<Repeat> FindGraphRepeats();
     void InitializeLib(std::string , std::string , std::string save_to="" );
     void CalculateCompressions(std::string mode="analytic");
     void InitializeLibFromDump(std::string );
@@ -41,7 +52,9 @@ private:
         void Calculate(NodeCompressions & , std::string mode="analytic");
     std::vector<double > CompressionStats(std::vector<double> res);
         SequenceGraph &sg;
-    uint64_t max_mem_gb;
+    void CalculateRepeatCompressions(NodeCompressions & nc, std::string mode="analytic");
+
+        uint64_t max_mem_gb;
     std::string outfile_name;
     std::string outfile_csv_name;
     std::string outfile_csv_name1;
@@ -55,6 +68,7 @@ private:
 
 
     KmerCompressionIndex kci;
+    RepeatAnalyzer ra;
 };
 
 

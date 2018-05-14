@@ -21,17 +21,53 @@ struct Repeat {
 
 };
 
+int add(int a, int b){
+    return a+b;
+}
+
+int do_operation(int (*op)(int a, int b) , int arg1, int arg2){
+    return op(arg1,arg2);
+}
+
+struct RepeatCompressions {
+
+    std::string compression_function_name;
+//    double (*compression_function)(sgNodeID_t, uint16_t, int) ;
+    double (*compression_function)(sgNodeID_t) ;
+
+    Repeat& repeat;
+    sgNodeID_t repeated_contig;
+
+    std::vector<double > in_compressions;
+    std::vector<double > out_compressions;
+    double repeat_compression;
+    //compression function is function used to calculate representation of read set in contig
+   // RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t, uint16_t=10, int=0), Repeat& repeat) :
+    RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t), Repeat& repeat) :
+            compression_function_name(cfn), compression_function(compression_function), repeat(repeat){
+        repeat_compression = compression_function(repeat.repeated_contig);
+       this->repeated_contig = repeat.repeated_contig;
+       for (auto in:repeat.in_contigs){ this->in_compressions.push_back(compression_function(in));}
+       ;
+
+       for (auto out:repeat.out_contigs) this->out_compressions.push_back(compression_function(out));
+    }
+
+};
+
 class RepeatAnalyzer{
-    RepeatAnalyzer(SequenceGraph &_sg, std::string lib_name="");
+public:
+    RepeatAnalyzer(SequenceGraph& _sg, std::string lib_name="");
     void FindRepeats(std::string name_base="rep", int limit=-1, int rep_min = 3000, int in_min=1000,int out_min=1000);
 
     void OutputRepeats(std::string fname, std::vector<size_t > to_include={});
 
-    void RepeatReduction(std::vector<sgNodeID_t > nodes );
+    Repeat RepeatReduction(Repeat );
+    std::vector<Repeat> repeats;
 
 private:
     SequenceGraph & sg;
-std::vector<Repeat> repeats;
+
 };
 
 #endif //BSG_REPEATANALYZER_H

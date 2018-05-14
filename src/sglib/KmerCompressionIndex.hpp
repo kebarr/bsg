@@ -27,6 +27,7 @@ public:
     void dump_histogram(std::string filename, uint16_t dataset=0);
     double compute_compression_for_node_old(sgNodeID_t node, uint16_t max_graph_freq=10, int dataset=0);
     double compute_compression_for_unique_node(sgNodeID_t _node, uint16_t max_graph_freq);
+    double compute_kcov_for_node(sgNodeID_t _node, uint16_t max_graph_freq, int dataset);
 
     std::vector<double>  compute_compression_for_node(sgNodeID_t node, uint16_t max_graph_freq=10, int dataset=0);
     SequenceGraph & sg;

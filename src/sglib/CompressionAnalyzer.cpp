@@ -3,9 +3,10 @@
 //
 
 #include "CompressionAnalyzer.h"
+#include "RepeatAnalyzer.h"
 
 
-CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L){
+CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L), ra(this->sg){
     std::vector<std::string> csvs = {outfile_csv_name1,outfile_csv_name2,outfile_csv_name3,outfile_csv_name4,outfile_csv_name5,outfile_csv_name6,outfile_csv_name7};
     for(int i=1; i <7; i++){
         csvs[i] = outfile_prefix+std::to_string(i) + ".csv";
@@ -18,6 +19,7 @@ CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb
     this->outfile_csv_name6 = csvs[5];
     this->outfile_csv_name7 = csvs[6];
     InitializeKCI();
+    ra.FindRepeats();
 
 };
 
@@ -97,7 +99,33 @@ std::vector<double > CompressionAnalyzer::CompressionStats(std::vector<double> r
 
 };
 
-void CompressionAnalyzer::InitializeKCI () {
+
+std::vector<Repeat> CompressionAnalyzer::FindGraphRepeats(){
+    /*
+}
+    std::vector<Repeat> repeats;
+    size_t max_deg = 0;
+    size_t  min_deg = sg.nodes.size();
+    for (sgNodeID_t counter = 1; counter < sg.nodes.size(); counter++) {
+
+ if (sg.is_canonical_repeat(counter)) {
+    Repeat rep;
+     rep.repeated_contig = counter;
+     auto bw = sg.get_bw_links(counter);
+     auto fw = sg.get_fw_links(counter);
+     for (auto b:bw) rep.in_contigs.push_back(b.dest);
+     for (auto f:fw) rep.in_contigs.push_back(f.dest);
+     rep.degree = bw.size();
+     if (bw.size() < min_deg) min_deg = bw.size();
+
+     if (bw.size() > max_deg) max_deg = bw.size();
+    repeats.push_back(rep);
+ }
+        std::cout << "counted " << repeats.size() << " repeats with min degree  " << min_deg << " and max degree " << max_deg <<std::endl;
+        return  repeats;*/
+};
+
+void CompressionAnalyzer::InitializeKCI(){
     std::cout << "Initializing kmer copression index, indexig sequene graph" << std::endl;
     //KmerCompressionIndex kci(sg, max_mem_gb * 1024L * 1024L * 1024L);
     //this->kci = kci;
@@ -261,6 +289,101 @@ std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<
 
 }
 
+void CompressionAnalyzer::CalculateRepeatCompressions(NodeCompressions & nc, std::string mode="analytic") {
+   int resolved_repeat_indices = 0;
+
+    for (auto r : ra.repeats){
+        Repeat reduced = ra.RepeatReduction(r);
+        RepeatCompressions rc("kci.compute_compression_for_node", kci.compute_compression_for_node, reduced);
+
+    }
+        auto rep_contig = r.repeated_contig;
+        auto kci_node = kci.compute_compression_for_node(rep_contig, 10, nc.index);
+        if (kci_node > 0) {
+            int nonzeros = 0;
+            if (kci_node[0] > 0) nonzeros += 1;
+            // all_repeat_contig_values.push_back(kci_node);
+            std::vector<sgNodeID_t> repeat_contigs = {rep_contig};
+
+            auto bw = sg.get_bw_links(rep_contig);
+            auto fw = sg.get_fw_links(rep_contig);
+
+            for (auto b: bw) {
+                auto kci_node = kci.compute_compression_for_node(b.dest, 10, nc.index);
+                count += 1;
+
+                auto ind = b.dest > 0 ? b.dest : -b.dest;
+                std::cout << "node: " << sg.oldnames[ind] << " ";
+                int c = 0;
+                for (auto k: kci_node) {
+                    csvs[c] << k << ", ";
+                    c += 1;
+                }
+
+                nc.compressions[b.dest] = kci_node[1] / kci_node[6];
+                if (kci_node[0] > 0) nonzeros += 1;
+                repeat_contigs.push_back(ind);
+                local_repeat_contig_values.push_back(kci_node);
+                all_repeat_contig_values.push_back(kci_node);
+
+            }
+
+
+            for (auto f: fw) {
+                auto kci_node = kci.compute_compression_for_node(f.dest, 10, nc.index);
+                count += 1;
+                auto ind = f.dest > 0 ? f.dest : -f.dest;
+                int c = 0;
+                for (auto k: kci_node) {
+                    csvs[c] << k << ", ";
+
+                    c += 1;
+                }
+                if (kci_node[0] > 0) nonzeros += 1;
+
+
+                nc.compressions[ind] = kci_node[1] / kci_node[6];
+                nc.canonical_repeats.push_back(rep_contig);
+                repeat_contigs.push_back(ind);
+                all_repeat_contig_values.push_back(kci_node);
+                local_repeat_contig_values.push_back(kci_node);
+
+
+            }
+            outfile << std::endl;
+            if (nonzeros >= 3 && mode == "analytic") {
+                auto res = AnalyseRepeat(local_repeat_contig_values);
+                for (int i = 0; i < res.size(); i++) {// i is index of node
+
+                    in_out_sane[i] += res[i][4];
+                    repeated_contig_sane[i] += res[i][5];
+                    if (res[i][0] != 0) {
+                        outfile << i << ": ";
+                        std::cout << i << ": ";
+                        resolved_repeat_indices.push_back(rep_contig);
+
+                        outfile << "\nResolved: " << i << "  " << metrics[i] << " ";
+                        std::cout << "\nResolved: " << i << " " << metrics[i] << " ";
+
+
+                        outfile << std::endl;
+                        std::cout << std::endl;
+                        resolved_repeat_count[i] += 1;
+
+                        for (int r = 0; r < res[i].size(); r++) {
+                            outfile << metrics[r] << ": " << res[i][r] << ", ";
+                            std::cout << metrics[r] << ": " << res[i][r] << ", ";
+
+                        }
+
+
+                        outfile << std::endl;
+                        std::cout << std::endl;
+                    }
+                }
+            }
+        }
+};
 
 void CompressionAnalyzer::Calculate(NodeCompressions & nc, std::string mode="analytic"){
     std::cout << "calculating compressions of " << nc.lib_name_r1 << " and " << nc.lib_name_r2 << " writing to " << outfile_name<< std::endl;
@@ -380,6 +503,7 @@ int c=0;
 
 
                             nc.compressions[ind] =  kci_node[1]/kci_node[6];
+                            nc.canonical_repeats.push_back(counter);
                             repeat_contigs.push_back(ind);
                             all_repeat_contig_values.push_back(kci_node);
                             local_repeat_contig_values.push_back(kci_node);

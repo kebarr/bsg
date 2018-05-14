@@ -90,7 +90,11 @@ void RepeatAnalyzer::OutputRepeats(std::string fname, std::vector<size_t > to_in
 
 };
 
-void RepeatAnalyzer::RepeatReduction(std::vector<sgNodeID_t > nodes){
+void RepeatAnalyzer::RepeatReduction(Repeat repeat){
+    std::vector<sgNodeID_t > nodes = {repeat.repeated_contig};
+    for (auto in:repeat.in_contigs) {nodes.push_back(in);}
+    for (auto out:repeat.out_contigs) {nodes.push_back(out);}
+
     //startig from closrst to repeat contig, include only kmers that differ
     std::unordered_set<uint64_t> seen_kmers,shared_kmers;
     size_t to_cpomare = sg.nodes[nodes[0]].sequence.size();

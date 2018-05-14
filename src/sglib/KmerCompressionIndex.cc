@@ -296,6 +296,39 @@ double KmerCompressionIndex::compute_compression_for_node_old(sgNodeID_t _node, 
 }
 
 
+
+double KmerCompressionIndex::compute_kcov_for_node(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
+
+    auto & node=sg.nodes[_node>0 ? _node:-_node];
+    std::vector<uint64_t> nkmers;
+    StringKMerFactory skf(node.sequence,31);
+    skf.create_kmers(nkmers);
+    //std::cout << node.sequence << std::endl;
+    int counter = 0;
+
+    uint64_t kcount=0,kcov=0,kcountcount=0,kcountu=0,kcovu=0,kcountcountu=0, counteru=0;
+    //std::cout << "kmers in node: "<< _node << ", " << nkmers.size() << std::endl;
+    for (auto &kmer : nkmers){
+        // find kmer in graph kmer with count > 0?
+        // need index of kmer in hraph_kmera - must be a better eay
+
+        // n o idea what i was doing there... it copied from abive...
+        //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
+        if (graph_kmers[kmer_map[kmer]].count > 0) {// should scale non uniwue kmers by number occurnces in graph
+            counter +=1;
+            kcountcount += graph_kmers[kmer_map[kmer]].count;
+            ++kcount;// inrement number of (unique??- now removed count = 1 ) kmers on node
+            kcov+=read_counts[dataset][kmer_map[kmer]]; // inrement coverage by count for this kmer in read set
+        }
+
+    }
+    //std::cout << "kcount: " << kcount << " kcov " << kcov << " kcountcount: " << kcountcount << " kcountu: " << kcountu << " kcovu " << kcovu << " kcountcountu: " << kcountcountu <<std::endl;
+
+    // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
+    return kcov;
+}
+
+
 std::vector<double> KmerCompressionIndex::compute_compression_for_node(sgNodeID_t _node, uint16_t max_graph_freq, int dataset) {
 
     auto & node=sg.nodes[_node>0 ? _node:-_node];
