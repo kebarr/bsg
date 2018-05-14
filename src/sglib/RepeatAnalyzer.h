@@ -13,29 +13,14 @@
 #include <numeric>
 #include <sglib/KmerCompressionIndex.hpp>
 
-struct Repeat {
-    std::string name_base;
-    sgNodeID_t repeated_contig; // theactual node can always be retrieved from sg
-    std::vector<sgNodeID_t> in_contigs;
-    std::vector<sgNodeID_t> out_contigs;
 
-};
-
-int add(int a, int b){
-    return a+b;
-}
-
-int do_operation(int (*op)(int a, int b) , int arg1, int arg2){
-    return op(arg1,arg2);
-}
-
+//compressions for each lib should be stored together
 struct RepeatCompressions {
 
     std::string compression_function_name;
 //    double (*compression_function)(sgNodeID_t, uint16_t, int) ;
     double (*compression_function)(sgNodeID_t) ;
 
-    Repeat& repeat;
     sgNodeID_t repeated_contig;
 
     std::vector<double > in_compressions;
@@ -43,17 +28,33 @@ struct RepeatCompressions {
     double repeat_compression;
     //compression function is function used to calculate representation of read set in contig
    // RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t, uint16_t=10, int=0), Repeat& repeat) :
-    RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t), Repeat& repeat) :
-            compression_function_name(cfn), compression_function(compression_function), repeat(repeat){
-        repeat_compression = compression_function(repeat.repeated_contig);
-       this->repeated_contig = repeat.repeated_contig;
-       for (auto in:repeat.in_contigs){ this->in_compressions.push_back(compression_function(in));}
+    RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t), sgNodeID_t repeated_contig, std::vector<sgNodeID_t > in_contigs, std::vector<sgNodeID_t > out_contigs) :
+            compression_function_name(cfn), compression_function(compression_function), repeated_contig(repeated_contig){
+        this->repeat_compression = compression_function(repeated_contig);
+       double in_c = 0;
+       for (auto in:in_contigs){auto res=compression_function(in); this->in_compressions.push_back(res); in_c += res;}
        ;
+        double out_c = 0;
 
-       for (auto out:repeat.out_contigs) this->out_compressions.push_back(compression_function(out));
+       for (auto out:out_contigs){auto res=compression_function(out); this->out_compressions.push_back(res); out_c += res;}
     }
 
+
 };
+
+
+struct Repeat {
+    std::string name_base;
+    sgNodeID_t repeated_contig; // theactual node can always be retrieved from sg
+    std::vector<sgNodeID_t> in_contigs;
+    std::vector<sgNodeID_t> out_contigs;
+    std::vector<std::pair<int, uint64_t>> reduced_in_contigs;
+    std::vector<std::pair<int, uint64_t>> reduced_out_contigs;
+    //string is name of compressipon function and vector is result of that function each read set
+    std::map<std::string, std::vector<RepeatCompressions> >rc;
+
+};
+
 
 class RepeatAnalyzer{
 public:
@@ -62,8 +63,9 @@ public:
 
     void OutputRepeats(std::string fname, std::vector<size_t > to_include={});
 
-    Repeat RepeatReduction(Repeat );
+    void RepeatReduction(Repeat );
     std::vector<Repeat> repeats;
+    std::vector<double> compressions_for_read_set( double (*compression_function)(sgNodeID_t, KmerCompressionIndex));
 
 private:
     SequenceGraph & sg;

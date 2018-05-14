@@ -90,6 +90,16 @@ void RepeatAnalyzer::OutputRepeats(std::string fname, std::vector<size_t > to_in
 
 };
 
+std::vector<double> RepeatAnalyzer::compressions_for_read_set(double (*compression_function)(sgNodeID_t, KmerCompressionIndex) ){
+    for (auto r:repeats){
+        RepeatReduction(r);
+        RepeatCompressions rc("kci.compute_kcov_for_node", compression_function, r.repeated_contig, r.in_contigs, r.out_contigs);
+
+    }
+
+};
+
+// this can't return an actual repeat as reduced contigs not in graph, so represent result on repeat struct, each in/out contig shoulxd just be a sequence of distinct kmers + positions in contig
 void RepeatAnalyzer::RepeatReduction(Repeat repeat){
     std::vector<sgNodeID_t > nodes = {repeat.repeated_contig};
     for (auto in:repeat.in_contigs) {nodes.push_back(in);}

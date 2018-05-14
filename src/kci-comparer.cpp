@@ -96,7 +96,7 @@ int main(int argc, char * argv[]) {
             outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
 
         }
-    ca.CalculateCompressions(mode=mode);
+    ca.CalculateRepeatCompressions();
 
     }
 

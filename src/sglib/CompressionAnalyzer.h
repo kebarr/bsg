@@ -44,6 +44,7 @@ public:
     void InitializeLib(std::string , std::string , std::string save_to="" );
     void CalculateCompressions(std::string mode="analytic");
     void InitializeLibFromDump(std::string );
+    void CalculateRepeatCompressions();
 
 private:
     void InitializeKCI();
@@ -52,7 +53,6 @@ private:
         void Calculate(NodeCompressions & , std::string mode="analytic");
     std::vector<double > CompressionStats(std::vector<double> res);
         SequenceGraph &sg;
-    void CalculateRepeatCompressions(NodeCompressions & nc, std::string mode="analytic");
 
         uint64_t max_mem_gb;
     std::string outfile_name;
