@@ -6,7 +6,7 @@
 #include <sglib/CompressionAnalyzer.h>
 
 
-RepeatAnalyzer::RepeatAnalyzer(SequenceGraph &_sg, std::string lib_name=""):sg(_sg){
+RepeatAnalyzer::RepeatAnalyzer(SequenceGraph &_sg, KmerCompressionIndex &_kci, std::string lib_name=""):sg(_sg), kci(_kci){
 
 };
 
@@ -90,10 +90,10 @@ void RepeatAnalyzer::OutputRepeats(std::string fname, std::vector<size_t > to_in
 
 };
 
-std::vector<double> RepeatAnalyzer::compressions_for_read_set(double (*compression_function)(sgNodeID_t, KmerCompressionIndex) ){
+std::vector<double> RepeatAnalyzer::compressions_for_read_set(double (*compression_function)(sgNodeID_t, KmerCompressionIndex &) ){
     for (auto r:repeats){
         RepeatReduction(r);
-        RepeatCompressions rc("kci.compute_kcov_for_node", compression_function, r.repeated_contig, r.in_contigs, r.out_contigs);
+        RepeatCompressions rc("kci.compute_kcov_for_node", compression_function,  r.repeated_contig,kci, r.in_contigs, r.out_contigs);
 
     }
 

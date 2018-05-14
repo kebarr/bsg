@@ -19,7 +19,7 @@ struct RepeatCompressions {
 
     std::string compression_function_name;
 //    double (*compression_function)(sgNodeID_t, uint16_t, int) ;
-    double (*compression_function)(sgNodeID_t) ;
+    double (*compression_function)(sgNodeID_t, KmerCompressionIndex&) ;
 
     sgNodeID_t repeated_contig;
 
@@ -28,15 +28,15 @@ struct RepeatCompressions {
     double repeat_compression;
     //compression function is function used to calculate representation of read set in contig
    // RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t, uint16_t=10, int=0), Repeat& repeat) :
-    RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t), sgNodeID_t repeated_contig, std::vector<sgNodeID_t > in_contigs, std::vector<sgNodeID_t > out_contigs) :
+    RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t, KmerCompressionIndex&), sgNodeID_t repeated_contig, KmerCompressionIndex &kci, std::vector<sgNodeID_t > in_contigs, std::vector<sgNodeID_t > out_contigs) :
             compression_function_name(cfn), compression_function(compression_function), repeated_contig(repeated_contig){
-        this->repeat_compression = compression_function(repeated_contig);
+        this->repeat_compression = compression_function(repeated_contig, kci);
        double in_c = 0;
-       for (auto in:in_contigs){auto res=compression_function(in); this->in_compressions.push_back(res); in_c += res;}
+       for (auto in:in_contigs){auto res=compression_function(in, kci); this->in_compressions.push_back(res); in_c += res;}
        ;
         double out_c = 0;
 
-       for (auto out:out_contigs){auto res=compression_function(out); this->out_compressions.push_back(res); out_c += res;}
+       for (auto out:out_contigs){auto res=compression_function(out, kci); this->out_compressions.push_back(res); out_c += res;}
     }
 
 
@@ -58,17 +58,18 @@ struct Repeat {
 
 class RepeatAnalyzer{
 public:
-    RepeatAnalyzer(SequenceGraph& _sg, std::string lib_name="");
+    RepeatAnalyzer(SequenceGraph& _sg, KmerCompressionIndex& _kci, std::string lib_name="");
     void FindRepeats(std::string name_base="rep", int limit=-1, int rep_min = 3000, int in_min=1000,int out_min=1000);
 
     void OutputRepeats(std::string fname, std::vector<size_t > to_include={});
 
     void RepeatReduction(Repeat );
     std::vector<Repeat> repeats;
-    std::vector<double> compressions_for_read_set( double (*compression_function)(sgNodeID_t, KmerCompressionIndex));
+    std::vector<double> compressions_for_read_set( double (*compression_function)(sgNodeID_t, KmerCompressionIndex &));
 
 private:
     SequenceGraph & sg;
+    KmerCompressionIndex & kci;
 
 };
 
