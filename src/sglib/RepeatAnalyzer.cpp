@@ -39,6 +39,7 @@ void RepeatAnalyzer::FindRepeats(std::string name_base="rep", int limit=-1, int 
         }
 
     }
+    read_sets_mapping_to_repeats.resize(repeats.size());
 };
 
 
@@ -91,26 +92,77 @@ void RepeatAnalyzer::OutputRepeats(std::string fname, std::vector<size_t > to_in
 };
 
 std::vector<double> RepeatAnalyzer::compressions_for_read_set(double (*compression_function)(sgNodeID_t, KmerCompressionIndex &) ){
+    int index=0;
+    int repeats_mapped=0;
+    std::vector<double> compressions;
+    std::cout << "Computing compressions for " << kci.current_lib << std::endl;
     for (auto r:repeats){
         RepeatReduction(r);
         RepeatCompressions rc("kci.compute_kcov_for_node", compression_function,  r.repeated_contig,kci, r.in_contigs, r.out_contigs);
+        r.rc["kci.compute_kcov_for_node"].push_back(rc);
+        if (rc.repeat_contained && rc.in_out_agree && rc.repeat_coverage_sane) {read_sets_mapping_to_repeats[index].push_back(kci.current_lib);
+        repeats_mapped+=1;
+            for (auto c:rc.in_compressions){
+                compressions.push_back(c);
+
+            }
+            compressions.push_back(rc.repeat_compression);
+            for (auto c:rc.out_compressions){
+                compressions.push_back(c);
+
+            }
+        };
+
 
     }
+    std::cout << "Read set " << kci.current_lib  << " mapped to " << repeats_mapped << " of " << repeats.size() << " repeats in  " << sg.filename<< std::endl;
 
+    return  compressions;
 };
 
-// this can't return an actual repeat as reduced contigs not in graph, so represent result on repeat struct, each in/out contig shoulxd just be a sequence of distinct kmers + positions in contig
+std::vector<std::vector<uint64_t> > RepeatAnalyzer::ConvertParallelContigsDistinctKmers(std::vector<sgNodeID_t > contigs){
+    std::vector<std::vector<uint64_t> > node_kmers;
+    size_t to_compare = sg.nodes[contigs[0]].sequence.size();
+    for (int c = 0; c< contigs.size(); c++){
+        if (sg.nodes[contigs[c]].sequence.size() < to_compare){
+            to_compare = sg.nodes[contigs[c]].sequence.size();
+        }
+    }
+    for (auto c:contigs) {
+        std::vector<uint64_t> nkmers;
+        StringKMerFactory skf(sg.nodes[llabs(c)].sequence,31);
+        std::vector<uint64_t> nkmers;
+        node_kmers.push_back(nkmers);
+        nkmers.reserve(sg.nodes[llabs(c)].sequence.size());
+        skf.create_kmers(nkmers);
+        node_kmers.push_back(nkmers);
+    }
+    return node_kmers;
+};
+
+// thiRepeatAnalyzer::s can't return an actual repeat as reduced contigs not in graph, so represent result on repeat struct, each in/out contig shoulxd just be a sequence of distinct kmers + positions in contig
 void RepeatAnalyzer::RepeatReduction(Repeat repeat){
-    std::vector<sgNodeID_t > nodes = {repeat.repeated_contig};
-    for (auto in:repeat.in_contigs) {nodes.push_back(in);}
-    for (auto out:repeat.out_contigs) {nodes.push_back(out);}
+    std::vector<sgNodeID_t > nodes_in;
+    std::vector<sgNodeID_t > nodes_out;
+    std::vector<std::vector<uint64_t> > node_kmers;
+    auto in_kmers = ConvertParallelContigsDistinctKmers(repeat.in_contigs);
+    auto out_kmers = ConvertParallelContigsDistinctKmers(repeat.out_contigs);
+
+    for (auto in:repeat.in_contigs) {nodes_in.push_back(in);
+        std::vector<uint64_t> nkmers;
+        StringKMerFactory skf(sg.nodes[llabs(in)].sequence,31);
+        std::vector<uint64_t> nkmers;
+        node_kmers.push_back(nkmers);
+        nkmers.reserve(sg.nodes[llabs(in)].sequence.size());
+        skf.create_kmers(nkmers);}
+    for (auto out:repeat.out_contigs) {nodes_out.push_back(out);}
 
     //startig from closrst to repeat contig, include only kmers that differ
     std::unordered_set<uint64_t> seen_kmers,shared_kmers;
-    size_t to_cpomare = sg.nodes[nodes[0]].sequence.size();
-    for (int c = 1; c< nodes.size(); c++){
-        if (sg.nodes[c].sequence.size() < to_cpomare){
-            to_cpomare = sg.nodes[c].sequence.size();
+    size_t to_cpomare_in = sg.nodes[nodes_in[0]].sequence.size();
+    for (int c = 0; c< nodes_in.size(); c++){
+        if (sg.nodes[nodes_in[c]].sequence.size() < to_cpomare_in){
+            to_cpomare_in = sg.nodes[nodes_in[c]].sequence.size();
         }
     }
     std::vector<std::vector<uint64_t> > node_kmers;
@@ -131,7 +183,9 @@ void RepeatAnalyzer::RepeatReduction(Repeat repeat){
             }
         }
     }
-    for (int i=0; i < to_cpomare; i++){
+    std::vector<std::vector<uint64_t > > in_contigs_distinct_kmers;
+    in_contigs_distinct_kmers.resize(repeat.in_contigs.size());
+    for (int i=0; i < to_cpomare_in; i++){
 
     }
 };

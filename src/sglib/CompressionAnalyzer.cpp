@@ -7,17 +7,7 @@
 
 
 CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L), ra(this->sg, this->kci){
-    std::vector<std::string> csvs = {outfile_csv_name1,outfile_csv_name2,outfile_csv_name3,outfile_csv_name4,outfile_csv_name5,outfile_csv_name6,outfile_csv_name7};
-    for(int i=1; i <7; i++){
-        csvs[i] = outfile_prefix+std::to_string(i) + ".csv";
-    }
-    this->outfile_csv_name1 = csvs[0];
-    this->outfile_csv_name2 = csvs[1];
-    this->outfile_csv_name3 = csvs[2];
-    this->outfile_csv_name4 = csvs[3];
-    this->outfile_csv_name5 = csvs[4];
-    this->outfile_csv_name6 = csvs[5];
-    this->outfile_csv_name7 = csvs[6];
+
     InitializeKCI();
     ra.FindRepeats();
 
@@ -56,49 +46,6 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
 
 
 
-std::vector<double > CompressionAnalyzer::CompressionStats(std::vector<double> res) {
-    if (res.size() == 0 ){
-        return {0,0,0,0,0};
-    }
-    auto sum = std::accumulate(res.begin(), res.end(), 0);
-    double sd;
-    double mean = sum / res.size();
-    for (auto c:res) {
-        sd += (c - mean) * (c - mean);
-    }
-    sd = (std::pow(sd, 0.5)) / ( res.size() - 1);
-    auto max = std::max_element(res.begin(), res.end());
-    auto min = std::min_element(res.begin(), res.end());
-    std::vector<double > final = {sum, sd, mean, *max, *min};
-    return final;
-
-};
-
-
-std::vector<Repeat> CompressionAnalyzer::FindGraphRepeats(){
-    /*
-}
-    std::vector<Repeat> repeats;
-    size_t max_deg = 0;
-    size_t  min_deg = sg.nodes.size();
-    for (sgNodeID_t counter = 1; counter < sg.nodes.size(); counter++) {
-
- if (sg.is_canonical_repeat(counter)) {
-    Repeat rep;
-     rep.repeated_contig = counter;
-     auto bw = sg.get_bw_links(counter);
-     auto fw = sg.get_fw_links(counter);
-     for (auto b:bw) rep.in_contigs.push_back(b.dest);
-     for (auto f:fw) rep.in_contigs.push_back(f.dest);
-     rep.degree = bw.size();
-     if (bw.size() < min_deg) min_deg = bw.size();
-
-     if (bw.size() > max_deg) max_deg = bw.size();
-    repeats.push_back(rep);
- }
-        std::cout << "counted " << repeats.size() << " repeats with min degree  " << min_deg << " and max degree " << max_deg <<std::endl;
-        return  repeats;*/
-};
 
 void CompressionAnalyzer::InitializeKCI(){
     std::cout << "Initializing kmer copression index, indexig sequene graph" << std::endl;
@@ -111,47 +58,16 @@ void CompressionAnalyzer::InitializeKCI(){
     std::cout << "Initialization complete" << std::endl;
 
      std::ofstream outfile_csv;
-    std::ofstream outfile_csv1;
-
-    std::ofstream outfile_csv2;
-
-    std::ofstream outfile_csv3;
-    std::ofstream outfile_csv4;
-    std::ofstream outfile_csv5;
-    std::ofstream outfile_csv6;
-    std::ofstream outfile_csv7;
 
     outfile_csv.open(outfile_csv_name, std::ofstream::out );
-    outfile_csv1.open(outfile_csv_name1, std::ofstream::out );
-    outfile_csv2.open(outfile_csv_name2, std::ofstream::out );
-    outfile_csv3.open(outfile_csv_name3, std::ofstream::out );
-    outfile_csv4.open(outfile_csv_name4, std::ofstream::out );
-    outfile_csv5.open(outfile_csv_name5, std::ofstream::out );
-    outfile_csv6.open(outfile_csv_name6, std::ofstream::out );
-    outfile_csv7.open(outfile_csv_name7, std::ofstream::out );
 
     for (size_t counter = 0; counter < sg.nodes.size(); counter++) {
         outfile_csv << sg.oldnames[counter] << ", ";
-        outfile_csv1 << sg.oldnames[counter] << ", ";
-        outfile_csv2 << sg.oldnames[counter] << ", ";
-        outfile_csv3 << sg.oldnames[counter] << ", ";
-        outfile_csv4 << sg.oldnames[counter] << ", ";
-        outfile_csv5 << sg.oldnames[counter] << ", ";
-        outfile_csv6<< sg.oldnames[counter] << ", ";
 
-        outfile_csv7<< sg.oldnames[counter] << ", ";
 
     }
     outfile_csv << std::endl;
-    outfile_csv1 << std::endl;
-    outfile_csv2 << std::endl;
-    outfile_csv3 << std::endl;
-    outfile_csv4 << std::endl;
-    outfile_csv5 << std::endl;
-    outfile_csv6 << std::endl;
-    outfile_csv7 << std::endl;
 
-    std::cout << "outfile_csv_name6 " << outfile_csv_name6 << std::endl;
     if (kci.read_counts.size()>0) {
         kci.compute_compression_stats();
         kci.dump_histogram(outfile_name + "kci_histogram.csv");

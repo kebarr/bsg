@@ -25,6 +25,9 @@ struct RepeatCompressions {
 
     std::vector<double > in_compressions;
     std::vector<double > out_compressions;
+    bool in_out_agree= false;
+    bool repeat_coverage_sane= false;
+    bool repeat_contained= false;
     double repeat_compression;
     //compression function is function used to calculate representation of read set in contig
    // RepeatCompressions(std::string cfn, double (*compression_function)(sgNodeID_t, uint16_t=10, int=0), Repeat& repeat) :
@@ -37,6 +40,13 @@ struct RepeatCompressions {
         double out_c = 0;
 
        for (auto out:out_contigs){auto res=compression_function(out, kci); this->out_compressions.push_back(res); out_c += res;}
+        if(repeat_compression > 0 && in_c >0 && out_c > 0) {
+            repeat_contained=true;
+            if (std::abs(in_c - out_c) < 0.1 * in_c &&
+                std::abs(in_c - out_c) < 0.1 * out_c) { this->in_out_agree = true; }
+            if (std::abs(in_c - repeat_compression) < 0.1 * in_c &&
+                std::abs(out_c - repeat_compression) < 0.1 * out_c) { this->repeat_coverage_sane = true; }
+        }
     }
 
 
@@ -70,7 +80,10 @@ public:
 private:
     SequenceGraph & sg;
     KmerCompressionIndex & kci;
+    std::vector<std::vector<int > > read_sets_mapping_to_repeats;
+    std::vector<std::vector<uint64_t> > ConvertParallelContigsDistinctKmers(std::vector<sgNodeID_t > contigs);
 
-};
+
+    };
 
 #endif //BSG_REPEATANALYZER_H
