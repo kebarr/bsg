@@ -68,9 +68,11 @@ struct NodeMetrics{
             candidate_core = true;
         }
     }
-
-
+// https://openclassrooms.com/forum/sujet/c-11-use-of-deleted-function no iea what i\m doing!
+    NodeMetrics(NodeMetrics const &);
+    NodeMetrics & operator = (NodeMetrics const &);
 };
+
 
 class CoreGenomeFinder {
 public:
@@ -84,13 +86,15 @@ public:
         int CalculateMetricForReadSet(std::string function_name, double (*compression_function)(std::vector<uint64_t> , KmerCompressionIndex&), std::string , int );
 
 private:
-    std::vector<NodeMetrics * > nms;
+    std::vector<NodeMetrics  > nms;
     std::vector<sgNodeID_t > candidates;
     std::vector<sgNodeID_t > core;
 
     SequenceGraph & sg;
     KmerCompressionIndex & kci;
     CoreGenomeParams gcp;
+    CoreGenomeFinder(CoreGenomeFinder const &);
+    CoreGenomeFinder & operator = (CoreGenomeFinder const &);
 };
 
 
