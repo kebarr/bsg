@@ -129,7 +129,6 @@ std::vector<std::vector<uint64_t> > RepeatAnalyzer::ConvertParallelContigsDistin
         }
     }
     for (auto c:contigs) {
-        std::vector<uint64_t> nkmers;
         StringKMerFactory skf(sg.nodes[llabs(c)].sequence,31);
         std::vector<uint64_t> nkmers;
         node_kmers.push_back(nkmers);
@@ -142,7 +141,7 @@ std::vector<std::vector<uint64_t> > RepeatAnalyzer::ConvertParallelContigsDistin
 
 // thiRepeatAnalyzer::s can't return an actual repeat as reduced contigs not in graph, so represent result on repeat struct, each in/out contig shoulxd just be a sequence of distinct kmers + positions in contig
 void RepeatAnalyzer::RepeatReduction(Repeat repeat){
-    std::vector<sgNodeID_t > nodes_in;
+ /*   std::vector<sgNodeID_t > nodes_in;
     std::vector<sgNodeID_t > nodes_out;
     std::vector<std::vector<uint64_t> > node_kmers;
     auto in_kmers = ConvertParallelContigsDistinctKmers(repeat.in_contigs);
@@ -151,7 +150,6 @@ void RepeatAnalyzer::RepeatReduction(Repeat repeat){
     for (auto in:repeat.in_contigs) {nodes_in.push_back(in);
         std::vector<uint64_t> nkmers;
         StringKMerFactory skf(sg.nodes[llabs(in)].sequence,31);
-        std::vector<uint64_t> nkmers;
         node_kmers.push_back(nkmers);
         nkmers.reserve(sg.nodes[llabs(in)].sequence.size());
         skf.create_kmers(nkmers);}
@@ -187,5 +185,5 @@ void RepeatAnalyzer::RepeatReduction(Repeat repeat){
     in_contigs_distinct_kmers.resize(repeat.in_contigs.size());
     for (int i=0; i < to_cpomare_in; i++){
 
-    }
+    } */
 };

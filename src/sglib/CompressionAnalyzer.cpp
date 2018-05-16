@@ -6,10 +6,10 @@
 #include "RepeatAnalyzer.h"
 
 
-CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L), ra(this->sg, this->kci){
+CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L),
+                                                                                                               ra(this->sg, this->kci), cgf(this->sg, this->kci, CoreGenomeParams()){
 
     InitializeKCI();
-    ra.FindRepeats();
 
 };
 
@@ -44,141 +44,10 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
 
 };
 
+void CompressionAnalyzer::InitializeCoreGenomeFinder(){
+    cgf.InitialiseNodeMetrics();
 
-
-
-void CompressionAnalyzer::InitializeKCI(){
-    std::cout << "Initializing kmer copression index, indexig sequene graph" << std::endl;
-    //KmerCompressionIndex kci(sg, max_mem_gb * 1024L * 1024L * 1024L);
-    //this->kci = kci;
-    kci.index_graph();
-
-    std::cout << sg.nodes.size()<< std::endl;
-    std::cout <<kci.sg.nodes.size()<< std::endl;
-    std::cout << "Initialization complete" << std::endl;
-
-     std::ofstream outfile_csv;
-
-    outfile_csv.open(outfile_csv_name, std::ofstream::out );
-
-    for (size_t counter = 0; counter < sg.nodes.size(); counter++) {
-        outfile_csv << sg.oldnames[counter] << ", ";
-
-
-    }
-    outfile_csv << std::endl;
-
-    if (kci.read_counts.size()>0) {
-        kci.compute_compression_stats();
-        kci.dump_histogram(outfile_name + "kci_histogram.csv");
-    }
-
-}
-
-// can wtite and test many versions of these- e.g taking inti acoount average compression for all contigs,
-// allow for >2 repeats, vary heuristics and heristic parametes
-std::vector<std::vector<double>> CompressionAnalyzer::AnalyseRepeat(std::vector<std::vector<double>> repeat_compressions, double tolerance=0.8, double diff_threshold=0.8) {
-
-  bool exit = false;
-
-    if (repeat_compressions.size() > 5) {
-        std::cout << "repeats of more thsan 2 not yet supported " << std::endl;
-
-        if (repeat_compressions.size() % 2 != 1) {
-
-            std::cout << " even sized vector of  " << repeat_compressions.size()
-                      << " contig ids is ont a valid representation of a canonical repeat" << std::endl;
-        }
-        exit = true;
-    } else if (repeat_compressions.size() < 5) {
-        std::cout << "vector of size " << repeat_compressions.size() << " thsan 2 not yet supported " << std::endl;
-        if (repeat_compressions.size() % 2 != 1) {
-
-            std::cout << " even sized vector of  " << repeat_compressions.size()
-                      << " contig is is ont a valid representation of a canonical repeat" << std::endl;
-        }
-        exit = true;
-    }
-    if (exit){
-        return  {{-1}};
-    }
-    std::vector<std::vector<double>> res_all;
-    // test each metric
-    for (int i=0; i <repeat_compressions[0].size(); i++) {
-
-        bool exit = false;
-        // see if repeat phased by reads- if compressions on each side pair to be reasonably close
-        // sum of compressions on each side should be a multiple of middle compression
-
-        auto in_sum = repeat_compressions[1][i] + repeat_compressions[2][i];
-        auto out_sum = repeat_compressions[3][i] + repeat_compressions[4][i];
-        double in_out_sane = 0;
-        double repeat_count_sane = 0;
-
-        std::vector<double> res = {0, 0, 0, 0, 0, 0};
-        double ratioinout = in_sum< out_sum ? in_sum/out_sum : out_sum/in_sum;
-        std::cout << "in: " << repeat_compressions[1][i] << " " << repeat_compressions[2][i] << " in sum: " << in_sum << " out: " << repeat_compressions[3][i] << repeat_compressions[4][i] << " out sum: " << out_sum <<  " ratioinout " << ratioinout <<std::endl;
-
-
-        if (ratioinout > tolerance) {
-            in_out_sane = 1;
-            auto a = std::abs(out_sum - repeat_compressions[0][i]) < tolerance;
-            auto b = std::abs(in_sum - repeat_compressions[0][i]) > tolerance;
-
-            // not sure this actually works for way i\m calculating 'compression'
-            double ratio1 = in_sum < repeat_compressions[0][i] ? in_sum / repeat_compressions[0][i] :
-                            repeat_compressions[0][i] / in_sum;
-            double ratio2 = out_sum < repeat_compressions[0][i] ? out_sum / repeat_compressions[0][i] :
-                            repeat_compressions[0][i] / out_sum;
-
-            // contig repeated 5 timea should have 5*kmers in reads than average, and 5*reads going in, split in a sane way- i/e. shouldn't be 1 kmer on one in, 100 on other in, then 50/50 out
-            if (ratio1 > tolerance && ratio2 > tolerance) {
-                repeat_count_sane = 1;
-            }
-            // in this ase check if resolves repeat, find out closest to in and see if close enough to call
-            auto pairs =
-                    repeat_compressions[3][i] - repeat_compressions[1][i] <
-                    repeat_compressions[4][i] - repeat_compressions[1][i]
-                    ? std::make_pair(3, 4) : std::make_pair(4, 3);
-            auto ratio_in_out_match1 = repeat_compressions[1][i] > repeat_compressions[std::get<0>(pairs)][i] ?
-                                       repeat_compressions[std::get<0>(pairs)][i] / repeat_compressions[1][i] :
-                                       repeat_compressions[1][i] / repeat_compressions[std::get<0>(pairs)][i];
-
-            auto ratio_in_out_match2 = repeat_compressions[2][i] > repeat_compressions[std::get<1>(pairs)][i] ?
-                                       repeat_compressions[std::get<1>(pairs)][i] / repeat_compressions[2][i] :
-                                       repeat_compressions[2][i] / repeat_compressions[std::get<1>(pairs)][i];
-
-            if (ratio_in_out_match1 > diff_threshold && ratio_in_out_match2 > diff_threshold) {
-                // then accprding to this arbitrary heiristic, we resolve to get 0 with pair 0
-                res[0] = repeat_compressions[std::get<0>(
-                        pairs)][i];// compression of closest out contig to first in contig
-                res[1] = repeat_compressions[1][i] +
-                         repeat_compressions[std::get<0>(pairs)][i];// compression of both in contigs
-
-                res[2] = repeat_compressions[std::get<1>(pairs)][i];
-                res[3] = repeat_compressions[2][i] + repeat_compressions[std::get<1>(pairs)][i];
-
-            } else {
-                // if its not resolved its more useful to know how different they were
-                res[1] = repeat_compressions[1][i] - repeat_compressions[std::get<0>(pairs)][i];
-                res[3] = repeat_compressions[2][i] - repeat_compressions[std::get<1>(pairs)][i];
-
-            }
-            res[4] = in_out_sane;
-            res[5] = repeat_count_sane;
-
-            std::cout << "res" << i << ": ";
-            for (auto r:res) {
-                std::cout << r << " ";
-            }
-
-            std::cout << std::endl;
-        }
-        res_all.push_back(res);
-    }
-    return  res_all;
-
-}
+};
 
 
 double compute_kcov_for_node(sgNodeID_t _node, KmerCompressionIndex& kci){
@@ -209,6 +78,47 @@ double compute_kcov_for_node(sgNodeID_t _node, KmerCompressionIndex& kci){
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
     return kcov;
 };
+
+void CompressionAnalyzer::FindCoreGenome() {
+    std::cout << " finding core based on " << kci.read_counts.size() << " varieties " << std::endl;
+    InitializeCoreGenomeFinder();
+
+        for (int i = 0; i < kci.read_counts.size(); i++) {
+            cgf.CalculateMetricForReadSet("basic", compute_kcov_for_node,  i);
+
+        }
+
+};
+
+
+void CompressionAnalyzer::InitializeKCI(){
+    std::cout << "Initializing kmer copression index, indexig sequene graph" << std::endl;
+    //KmerCompressionIndex kci(sg, max_mem_gb * 1024L * 1024L * 1024L);
+    //this->kci = kci;
+    kci.index_graph();
+
+    std::cout << sg.nodes.size()<< std::endl;
+    std::cout <<kci.sg.nodes.size()<< std::endl;
+    std::cout << "Initialization complete" << std::endl;
+
+     std::ofstream outfile_csv;
+
+    outfile_csv.open(outfile_csv_name, std::ofstream::out );
+
+    for (size_t counter = 0; counter < sg.nodes.size(); counter++) {
+        outfile_csv << sg.oldnames[counter] << ", ";
+
+
+    }
+    outfile_csv << std::endl;
+
+    if (kci.read_counts.size()>0) {
+        kci.compute_compression_stats();
+        kci.dump_histogram(outfile_name + "kci_histogram.csv");
+    }
+
+}
+
 
 void CompressionAnalyzer::CalculateRepeatCompressions() {
    int resolved_repeat_indices = 0;

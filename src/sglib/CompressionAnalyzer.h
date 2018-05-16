@@ -12,7 +12,7 @@
 #include <fstream>
 #include <numeric>
 #include <sglib/KmerCompressionIndex.hpp>
-
+#include <sglib/CoreGenomeFinder.h>
 #include <sglib/RepeatAnalyzer.h>
 
 
@@ -45,7 +45,8 @@ public:
     void CalculateCompressions(std::string mode="analytic");
     void InitializeLibFromDump(std::string );
     void CalculateRepeatCompressions();
-
+    void InitializeCoreGenomeFinder();
+    void FindCoreGenome();
 private:
     void InitializeKCI();
 
@@ -56,7 +57,7 @@ private:
     std::string outfile_name;
     std::string outfile_csv_name;
 
-
+    CoreGenomeFinder cgf;
     KmerCompressionIndex kci;
     RepeatAnalyzer ra;
 };
