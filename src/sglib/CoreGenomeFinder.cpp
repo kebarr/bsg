@@ -11,9 +11,13 @@ void CoreGenomeFinder::InitialiseNodeMetrics(){
     std::cout << "Initialising Node Metrics for " << sg.nodes.size() << " nodes"<< std::endl;
     int count =0;
     int candidate_count = 0;
+    int seq_len = 0;
+    int candidate_seq_len = 0;
+    nms.resize(sg.nodes.size());
     for (auto node:sg.nodes) {
         std::vector<uint64_t> nkmers;
         StringKMerFactory skf(node.sequence, 31);
+        seq_len += node.sequence.size();
         nkmers.reserve(node.sequence.size());
         skf.create_kmers(nkmers);
 
@@ -32,36 +36,98 @@ void CoreGenomeFinder::InitialiseNodeMetrics(){
             out_contigs.push_back(c.dest);
         }
         NodeMetrics nm(kci.graph_kmers, nkmers, node, count, gcp, in_contigs, out_contigs);
-        nms.push_back(nm);
+        nms[count] = &nm;
 if (nm.candidate_core){
+    candidates.push_back(nm.id);
     candidate_count += 1;
+    candidate_seq_len += node.sequence.size();
     std::cout << " len : " << nm.sequence_length << " id " << nm.id << " in " << nm.in_contigs.size() << " out " << nm.out_contigs.size() <<
-        " kmers " << nm.kmers.size() << " unique " <<  nm.unique_kmer_mask.size() <<  std::endl;
+        " kmers " << nm.kmers.size() <<  std::endl;
 }
         count +=1;
+
     }
-    std::cout << "found " << candidate_count << " candidate core genome nodes " << std::endl;
+    this->candidates = candidates;
+    std::cout << "found " << candidate_count << " candidate core genome nodes with  seq len " << candidate_seq_len << " out of " << seq_len << " bases in graph" << std::endl;
 };
 
-void CoreGenomeFinder::CalculateMetricForReadSet(std::string function_name, double (*compression_function)(sgNodeID_t, KmerCompressionIndex&), int read_set){
+int CoreGenomeFinder::CalculateMetricForReadSet(std::string function_name, double (*compression_function)(std::vector<uint64_t> , KmerCompressionIndex&), std::string filename,int read_set){
     kci.current_lib = read_set;
-    for (auto n:nms) {
-        if (n.candidate_core) {
-            if (n.lib_vals.find(function_name) == n.lib_vals.end()) {
-                n.lib_vals[function_name] = {};
+    std::ofstream outfile;
+    outfile.open(filename);
+    int mapped = 0;
+    std::vector<double > vals;
+    std::cout << " calculating " << function_name << " for " << read_set << std::endl;
+    for (auto i:candidates) {
+        auto n = nms[i];
+        outfile << n->id << ", ";
+             if (n->lib_vals.find(function_name) == n.lib_vals.end()) {
+                 this->nms[i].lib_vals[function_name] = {};
             }
-            if (n.mapped_libs.find(function_name) == n.mapped_libs.end()) {
-                n.mapped_libs[function_name] = {};
+            auto res = compression_function(n.kmers, kci);
+        vals.push_back(res);
+        nms[i].lib_vals[function_name].push_back(res);
+            if (res > gcp.lib_kmer_thresh) {
+                nms[i].number_libs_mapped +=1;
+                mapped += 1;
+                std::cout <<  " libs mapped: " << nms[i].number_libs_mapped << std::endl;
 
             }
-            auto res = compression_function(n.id, kci);
-            n.lib_vals[function_name].push_back(res);
-            if (res > gcp.lib_kmer_thresh) {
-                n.mapped_libs[function_name].push_back(read_set);
+            std::cout << "node " << n.id << "res " << res << " libs mapped: " << nms[i].number_libs_mapped << std::endl;
+    }
+    this->nms = nms;
+outfile<< std::endl;
+    for (auto r:vals){
+        outfile << r << ", " ;
+    }
+    outfile<< std::endl;
+
+    std::cout << " read_set " << read_set << " mapped to " << mapped << " candidate contigs" << std::endl;
+    return  mapped;
+};
+
+
+void CoreGenomeFinder::OutputNodeMetrics(std::string filename) {
+    std::ofstream outfile;
+    outfile.open(filename);
+    for (auto n:nms){
+        outfile << "id: " <<  n.id << " length, " << n.sequence_length<< " core candidate " << n.candidate_core << " core: " << n.core << " ";
+        for (auto m:n.lib_vals) {
+            outfile << m.first << ": ";
+            for (auto v: m.second) {
+                outfile << v << ", ";
             }
+            outfile << std::endl;
         }
     }
+}
+
+void CoreGenomeFinder::OutputCoreFasta(std::string filename){
+    std::ofstream outfile;
+    outfile.open(filename);
+    std::cout <<  " output contigs to " << filename << std::endl;
+
+    for (auto n:core){
+        outfile << ">" << nms[n].id << std::endl << sg.nodes[n].sequence  << std::endl;
+
+    }
 };
+
+void CoreGenomeFinder::SelectCoreGenome(){
+    std::cout << " choosing core contigs " << std::endl;
+    int len=0;
+    for (auto i:candidates) {
+        auto n = nms[i];
+        if (n.number_libs_mapped> gcp.min_libs){
+            core.push_back(n.id);
+            len += n.sequence_length;
+            this-> nms[i].core = true;
+        }
+    }
+    std::cout << core.size() << " contigs cound with total length " << len << std::endl;
+
+};
+
 
 /* this will probably savetine if i can work out how....
 void CoreGenomeFinder::DumpNodeMetrics(std::string filename) {

@@ -6,7 +6,7 @@
 #include "RepeatAnalyzer.h"
 
 
-CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_name(outfile_prefix + ".txt"), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L),
+CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_prefix(outfile_prefix), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L),
                                                                                                                ra(this->sg, this->kci), cgf(this->sg, this->kci, CoreGenomeParams()){
 
     InitializeKCI();
@@ -50,43 +50,64 @@ void CompressionAnalyzer::InitializeCoreGenomeFinder(){
 };
 
 
-double compute_kcov_for_node(sgNodeID_t _node, KmerCompressionIndex& kci){
-    auto & node=kci.sg.nodes[_node>0 ? _node:-_node];
-    std::vector<uint64_t> nkmers;
-    StringKMerFactory skf(node.sequence,31);
-    skf.create_kmers(nkmers);
-    //std::cout << node.sequence << std::endl;
+double compute_kcov_for_node(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci){
+
     int counter = 0;
 
     uint64_t kcount=0,kcov=0;
-    //std::cout << "kmers in node: "<< _node << ", " << nkmers.size() << std::endl;
     for (auto &kmer : nkmers){
-        // find kmer in graph kmer with count > 0?
-        // need index of kmer in hraph_kmera - must be a better eay
-
         // n o idea what i was doing there... it copied from abive...
         //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
         if (kci.graph_kmers[kci.kmer_map[kmer]].count > 0) {// should scale non uniwue kmers by number occurnces in graph
             counter +=1;
-            ++kcount;// inrement number of (unique??- now removed count = 1 ) kmers on node
             kcov+=kci.read_counts[kci.current_lib][kci.kmer_map[kmer]]; // inrement coverage by count for this kmer in read set
         }
 
     }
-    //std::cout << "kcount: " << kcount << " kcov " << kcov << " kcountcount: " << kcountcount << " kcountu: " << kcountu << " kcovu " << kcovu << " kcountcountu: " << kcountcountu <<std::endl;
-
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
-    return kcov;
+    return kcov/(double)nkmers.size();
 };
 
+
+double compute_unique_kmers_for_node(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci){
+
+    int counter = 0;
+
+    uint64_t kcount=0,kcov=0;
+    for (auto &kmer : nkmers){
+        // n o idea what i was doing there... it copied from abive...
+        //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
+        if (kci.graph_kmers[kci.kmer_map[kmer]].count ==1) {// should scale non uniwue kmers by number occurnces in graph
+            counter +=1;
+            kcov+=kci.read_counts[kci.current_lib][kci.kmer_map[kmer]]; // inrement coverage by count for this kmer in read set
+        }
+
+    }
+
+    // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
+    return kcov/(double)nkmers.size();
+};
+
+
 void CompressionAnalyzer::FindCoreGenome() {
+    std::vector<int> res1;
+    std::vector<int> res2;
+    res1.resize(kci.read_counts.size());
+    res2.resize(kci.read_counts.size());
+
     std::cout << " finding core based on " << kci.read_counts.size() << " varieties " << std::endl;
     InitializeCoreGenomeFinder();
 
         for (int i = 0; i < kci.read_counts.size(); i++) {
-            cgf.CalculateMetricForReadSet("basic", compute_kcov_for_node,  i);
+            auto r1 = cgf.CalculateMetricForReadSet("compute_kcov_for_node",  compute_kcov_for_node, outfile_prefix + std::to_string(i) + "coverage1.csv", i);
+            auto r2 = cgf.CalculateMetricForReadSet("compute_unique_kmers_for_node", compute_unique_kmers_for_node, outfile_prefix + std::to_string(i) + "coverage2`.csv", i);
+            res1[i] = r1;
+            res2[i] = r2;
 
         }
+    cgf.SelectCoreGenome();
+    cgf.OutputNodeMetrics(outfile_prefix + "metrics.txt");
+    cgf.OutputCoreFasta(outfile_prefix + "core.fasta");
 
 };
 
@@ -96,6 +117,13 @@ void CompressionAnalyzer::InitializeKCI(){
     //KmerCompressionIndex kci(sg, max_mem_gb * 1024L * 1024L * 1024L);
     //this->kci = kci;
     kci.index_graph();
+    int uniqur = 0;
+    for (auto k: kci.graph_kmers){
+        if (k.count == 1){
+            uniqur += 1;
+        }
+    }
+    std::cout << uniqur << " of " << kci.graph_kmers.size() << " uniwue" << std::endl;
 
     std::cout << sg.nodes.size()<< std::endl;
     std::cout <<kci.sg.nodes.size()<< std::endl;
@@ -114,7 +142,7 @@ void CompressionAnalyzer::InitializeKCI(){
 
     if (kci.read_counts.size()>0) {
         kci.compute_compression_stats();
-        kci.dump_histogram(outfile_name + "kci_histogram.csv");
+        kci.dump_histogram(outfile_prefix + "kci_histogram.csv");
     }
 
 }
