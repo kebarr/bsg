@@ -90,8 +90,8 @@ double compute_unique_kmers_for_node(std::vector<uint64_t> nkmers, KmerCompressi
 
 
 void CompressionAnalyzer::FindCoreGenome() {
-    std::vector<int> res1;
-    std::vector<int> res2;
+    std::vector<std::vector<double > > res1;
+    std::vector<std::vector<double > > res2;
     res1.resize(kci.read_counts.size());
     res2.resize(kci.read_counts.size());
 
