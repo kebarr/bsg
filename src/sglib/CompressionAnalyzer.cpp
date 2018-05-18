@@ -35,6 +35,8 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
     kci.start_new_count();
     kci.add_counts_from_file(lib_name_r1);
     kci.add_counts_from_file(lib_name_r2);
+    kci.compute_compression_stats(kci.read_counts.size()-1);
+
     for (int i=0; i < 10 ; i++){
        std::cout << "gc count" <<  kci.graph_kmers[i].count << " kmer " << kci.kmer_map[i] << std::endl;
     }

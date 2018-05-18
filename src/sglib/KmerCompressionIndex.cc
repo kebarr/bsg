@@ -30,6 +30,10 @@ void KmerCompressionIndex::index_graph(){
             kcf.next_element(graph_kmers);
         }
     }
+
+    for (int i=0; i < 10 ; i++){
+        std::cout << "gc count" <<  graph_kmers[i].count << " kmer " << kmer_map[i] << std::endl;
+    }
     sglib::OutputLog(sglib::INFO)<<graph_kmers.size()<<" kmers in total"<<std::endl;
     sglib::OutputLog(sglib::INFO) << "  Sorting..."<<std::endl;
     std::sort(graph_kmers.begin(),graph_kmers.end());
@@ -41,8 +45,16 @@ void KmerCompressionIndex::index_graph(){
         else if (*wi<*ri) {++wi; *wi=*ri;++ri;}
         else if (*wi==*ri){wi->merge(*ri);++ri;}
     }
+    std::cout << "gc size " << graph_kmers.size() << graph_kmers[graph_kmers.size()-1].count  << std::endl;
     for (int i=0; i < 10 ; i++){
         std::cout << "gc count" <<  graph_kmers[i].count << " kmer " << kmer_map[i] << std::endl;
+        std::cout << "gc count" <<  graph_kmers[i]<< std::endl;
+
+    }
+    for (auto gk:graph_kmers){
+        if (gk.count == 1 || gk.count == 2 || gk.count == 3 || gk.count == 4 || gk.count == 5 ) {
+            std::cout << gk.count << " " << gk.kmer << std::endl;
+        }
     }
     graph_kmers.resize(wi+1-graph_kmers.begin());
     sglib::OutputLog(sglib::INFO)<<graph_kmers.size()<<" kmers in index"<<std::endl;
