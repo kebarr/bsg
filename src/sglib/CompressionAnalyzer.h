@@ -42,7 +42,7 @@ public:
     std::vector<NodeCompressions> compressions;
     std::vector<Repeat> FindGraphRepeats();
     void InitializeLib(std::string , std::string , std::string save_to="" );
-    void CalculateCompressions(std::string mode="analytic");
+    void CalculateCompressions();
     void InitializeLibFromDump(std::string );
     void CalculateRepeatCompressions();
     void InitializeCoreGenomeFinder();

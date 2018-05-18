@@ -41,7 +41,9 @@ void KmerCompressionIndex::index_graph(){
         else if (*wi<*ri) {++wi; *wi=*ri;++ri;}
         else if (*wi==*ri){wi->merge(*ri);++ri;}
     }
-
+    for (int i=0; i < 10 ; i++){
+        std::cout << "gc count" <<  graph_kmers[i].count << " kmer " << kmer_map[i] << std::endl;
+    }
     graph_kmers.resize(wi+1-graph_kmers.begin());
     sglib::OutputLog(sglib::INFO)<<graph_kmers.size()<<" kmers in index"<<std::endl;
     //TODO: remove kmers with more than X in count

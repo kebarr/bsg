@@ -19,9 +19,9 @@
 struct CoreGenomeParams {
     int sequence_length_thresh=1000;
     double kmer_thresh=0.1; // proportion ofunique  kmers requireed in contigs
-    int min_links=1; // miimum number of contigs are core genome candidate shpuld map to
+    int min_links=1; // miimum number of vontigs are core genome candidate shpuld connect to
     int min_libs=1;// min varieties that candidates should be present in
-    double lib_kmer_thresh = 0.8; // how many kmers in cntig shouls be present in read set to consider that contig included by that read set
+    std::vector<double> lib_thresh = {0.8, 0.8}; // thresholds for each metric for a  contig to be considered  included by that read set
 };
 
 struct NodeMetrics{
@@ -36,12 +36,12 @@ struct NodeMetrics{
     std::vector<sgNodeID_t> in_contigs;
     std::vector<sgNodeID_t> out_contigs;
     bool candidate_core= false;
-    bool core = false;
-    std::map< std::string, int> number_libs_mapped;
+    std::vector<bool> core; // should just use list with indexes corresponding to fn name
+    std::vector<int> number_libs_mapped;
     bool sane_flow;
     //std::map<std::string,  std::vector<int>> mapped_libs; // for each metric, libs that met threshold
     //string is name of metrics function and vector is result of that function each read set
-    std::map<std::string, std::vector<double> > lib_vals;
+    std::vector<std::vector<double> > lib_vals;
     NodeMetrics(KmerCompressionIndex kci, std::vector<uint64_t> nkmers, Node & _node, sgNodeID_t _id, CoreGenomeParams _gcp, std::vector<sgNodeID_t> _in_contigs, std::vector<sgNodeID_t> _out_contigs):
             node(_node), id(_id), kmers(nkmers), sequence_length(this->node.sequence.size()), gcp(_gcp), in_contigs(_in_contigs), out_contigs(_out_contigs){
         unique_kmer_mask.resize(nkmers.size());
@@ -63,24 +63,29 @@ struct NodeMetrics{
 
 
         }
-        std::cout<< counter << " kmers uniwues of " << nkmers.size() << std::endl;
         double unique_kmers = counter/(double)nkmers.size();
         if (sequence_length > gcp.sequence_length_thresh && in_contigs.size() + out_contigs.size() >= gcp.min_links && unique_kmers > gcp.kmer_thresh ){
             candidate_core = true;
         }
     }
-    void increment_number_libs_mapped(std::string fn){
+
+    void add_metric(){
+        number_libs_mapped.push_back(0);
+        lib_vals.emplace_back();
+        core.push_back(false);
+    }
+    void increment_number_libs_mapped(int fn){
 
         number_libs_mapped[fn] += 1;
     }
 
-    void update_metric(std::string fn, double value){
+    void update_metric(int fn, double value){
 
-        if (lib_vals.find(fn) != lib_vals.end()){
             lib_vals[fn].push_back(value);
-        } else{
-            lib_vals[fn] = {value};
-        }
+    }
+
+    void is_core_for_metric(int fn){
+        core[fn] = true;
     }
 // https://openclassrooms.com/forum/sujet/c-11-use-of-deleted-function no iea what i\m doing!
     //NodeMetrics(NodeMetrics const &);
@@ -95,14 +100,21 @@ public:
     void SelectCoreGenome();
     void InitialiseNodeMetrics();
     void OutputNodeMetrics(std::string  filename);
-    void OutputCoreFasta(std::string filename);
+    void OutputCoreFasta(std::string );
+    void EvaluateAllMetrics();
 
-    std::vector<double > CalculateMetricForReadSet(std::string function_name, double (*compression_function)(std::vector<uint64_t> , KmerCompressionIndex&), std::string , int );
+    std::vector<double > CalculateMetricForReadSet(std::string function_name, double (*compression_function)(std::vector<uint64_t> , KmerCompressionIndex&, int),  int );
+    std::vector<NodeMetrics  >  nms;
+    std::vector< std::vector<double > > EvaluateMetric( std::string , double (*)(std::vector<uint64_t> , KmerCompressionIndex&, int));
+    void AlternateParams(std::vector<CoreGenomeParams >);
 
 private:
-    std::vector<NodeMetrics  >  nms;
+    std::map<std::string, int> function_names;
+
+    void OutputCoreFastaForMetric(std::string , std::string  const );
+
     std::vector<sgNodeID_t > candidates;
-    std::vector<sgNodeID_t > core;
+    std::map< std::string, std::vector<sgNodeID_t > >core;
 
     SequenceGraph & sg;
     KmerCompressionIndex & kci;
