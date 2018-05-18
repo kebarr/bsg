@@ -95,14 +95,10 @@ public:
                 if (fkmer <= rkmer) {
                     // Is fwd
                     mers.emplace_back(fkmer, 1);
-                    std::cout << mers.back().count << "    " << mers.back().kmer << std::endl;
-                    std::cout << mers.back() << std::endl;
                     ;
                 } else {
                     // Is bwd
                     mers.emplace_back(rkmer, 1);
-                    std::cout << mers.back()<< std::endl;
-                    std::cout << mers.back().count << "   " << mers.back().kmer << std::endl;
 
                 }
             }

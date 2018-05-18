@@ -37,9 +37,6 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
     kci.add_counts_from_file(lib_name_r2);
     kci.compute_compression_stats(kci.read_counts.size()-1);
 
-    for (int i=0; i < 10 ; i++){
-       std::cout << "gc count" <<  kci.graph_kmers[i].count << " kmer " << kci.kmer_map[i] << std::endl;
-    }
     if (save_to != ""){
         kci.save_to_disk(save_to, nc.index);
     }
@@ -61,7 +58,6 @@ double compute_kmers_present_for_node(std::vector<uint64_t> nkmers, KmerCompress
         // n o idea what i was doing there... it copied from abive...
         //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
         if (kci.graph_kmers[kci.kmer_map[kmer]].count > 0 && kci.read_counts[dataset][kci.kmer_map[kmer]] > 0 ){// should scale non uniwue kmers by number occurnces in graph
-std::cout << kci.graph_kmers[kci.kmer_map[kmer]].count << " kmer count " <<std::endl;
             kcov+=1;}
 
     }
@@ -81,8 +77,8 @@ double unique_kmers_present(std::vector<uint64_t> nkmers, KmerCompressionIndex& 
         //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
         if (kci.graph_kmers[kci.kmer_map[kmer]].count == 1) {
             counter += 1;
-            if (kci.read_counts[dataset][kci.kmer_map[kmer] >
-                                         0]) {// should scale non uniwue kmers by number occurnces in graph
+            if (kci.read_counts[dataset][kci.kmer_map[kmer]] >
+                                         0) {// should scale non uniwue kmers by number occurnces in graph
                 kcov += 1;
             }
 
@@ -126,7 +122,8 @@ double read_coverage(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci, in
         }
 
     }
-    // count contig as repesented in read set if more than 70%? kmers present
+    // count con
+    //tig as repesented in read set if more than 70%? kmers present
     // this will end up same as one of others...
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
     return kcov/(double)nkmers.size();

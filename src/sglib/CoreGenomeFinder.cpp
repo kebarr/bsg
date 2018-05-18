@@ -93,7 +93,7 @@ std::vector<double > CoreGenomeFinder::CalculateMetricForReadSet(std::string fun
 
     }
 
-    std::cout << " read_set " << read_set << " mapped to " << mapped << " candidate contigs" << std::endl;
+    std::cout << " read_set " << read_set << " mapped to " << mapped << " candidate contigs with " << function_name  << std::endl;
     return  vals;
 };
 
