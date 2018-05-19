@@ -150,7 +150,7 @@ add_library(sequence_graph SHARED
             src/sglib/GraphPartitioner.cc
             src/sglib/logger/OutputLog.cc
         src/sglib/CompressionAnalyzer.cpp
-        src/sglib/RepeatAnalyzer.cpp src/sglib/RepeatAnalyzer.h src/sglib/CoreGenomeFinder.cpp src/sglib/CoreGenomeFinder.h)
+        src/sglib/RepeatAnalyzer.cpp src/sglib/RepeatAnalyzer.h src/sglib/CoreGenomeFinder.cpp src/sglib/CoreGenomeFinder.h src/sglib/UniqueContigIdentifier.cpp src/sglib/UniqueContigIdentifier.h)
 
 target_link_libraries(sequence_graph ${DEPENDENCY_LIBS})
 
@@ -214,7 +214,7 @@ add_executable(seq-sorter
                src/seq-sorter.cpp)
 
 add_executable(kci-comparer
-        src/kci-comparer.cpp src/sglib/CompressionAnalyzer.cpp src/sglib/CompressionAnalyzer.h src/sglib/CoreGenomeFinder.cpp src/sglib/CoreGenomeFinder.h)
+        src/kci-comparer.cpp src/sglib/CompressionAnalyzer.cpp src/sglib/CompressionAnalyzer.h src/sglib/CoreGenomeFinder.cpp src/sglib/CoreGenomeFinder.h src/sglib/UniqueContigIdentifier.cpp src/sglib/UniqueContigIdentifier.h)
 
 add_executable(repeat-analysis src/repeat-analysis.cpp src/repeat-analysis.cpp src/sglib/RepeatAnalyzer.cpp src/sglib/RepeatAnalyzer.h)
 

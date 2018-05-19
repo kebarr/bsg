@@ -37,6 +37,7 @@ public:
     uint64_t max_mem;
     uint16_t uniq_mode=0;
     std::unordered_map<uint64_t,uint64_t> kmer_map;
+    double mean;
 };
 
 

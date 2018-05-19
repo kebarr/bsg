@@ -69,10 +69,12 @@ struct NodeMetrics{
         }
     }
 
-    void add_metric(){
-        number_libs_mapped.push_back(0);
-        lib_vals.emplace_back();
-        core.push_back(false);
+    void add_metric(int i){
+        if (number_libs_mapped.size() == i) {
+            number_libs_mapped.push_back(0);
+            lib_vals.emplace_back();
+            core.push_back(false);
+        }
     }
     void increment_number_libs_mapped(int fn){
 
@@ -106,9 +108,10 @@ public:
     std::vector<double > CalculateMetricForReadSet(std::string function_name, double (*compression_function)(std::vector<uint64_t> , KmerCompressionIndex&, int),  int );
     std::vector<NodeMetrics  >  nms;
     std::vector< std::vector<double > > EvaluateMetric( std::string , double (*)(std::vector<uint64_t> , KmerCompressionIndex&, int));
-    void AlternateParams(std::vector<CoreGenomeParams >);
+    void AlternateParams(std::vector<CoreGenomeParams >);\
 
-private:
+
+        private:
     std::map<std::string, int> function_names;
 
     void OutputCoreFastaForMetric(std::string , std::string  const );

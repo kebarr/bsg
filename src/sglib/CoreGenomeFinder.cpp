@@ -78,7 +78,7 @@ std::vector<double > CoreGenomeFinder::CalculateMetricForReadSet(std::string fun
     std::cout << " calculating " << function_name << " for " << read_set << std::endl;
     for (auto i:candidates) {
         auto n = nms[i];
-        nms[i].add_metric();
+        nms[i].add_metric(function_names[function_name]);
             auto res = compression_function(n.kmers, kci, read_set);
         vals.push_back(res);
 
@@ -102,10 +102,10 @@ void CoreGenomeFinder::OutputNodeMetrics(std::string filename) {
     std::ofstream outfile;
     outfile.open(filename);
     for (auto n:nms){
-        outfile << "id: " <<  sg.oldnames[n.id] << " length, " << n.sequence_length<< " core candidate " << n.candidate_core  << " ";
+        outfile << " id: " <<  sg.oldnames[n.id] << " length, " << n.sequence_length<< " core candidate " << n.candidate_core  << " ";
         outfile << std::endl;
         for (int i=0; i < n.lib_vals.size() ; i++) {
-            outfile << "metric " << i << ": ";
+            outfile << " metric " << i << ": ";
             for (auto v: n.lib_vals[i]){
                 outfile << v << ", ";
             }

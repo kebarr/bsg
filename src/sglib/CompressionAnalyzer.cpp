@@ -55,6 +55,7 @@ double compute_kmers_present_for_node(std::vector<uint64_t> nkmers, KmerCompress
 
     uint64_t kcount=0,kcov=0;
     for (auto &kmer : nkmers){
+        counter +=1;
         // n o idea what i was doing there... it copied from abive...
         //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
         if (kci.graph_kmers[kci.kmer_map[kmer]].count > 0 && kci.read_counts[dataset][kci.kmer_map[kmer]] > 0 ){// should scale non uniwue kmers by number occurnces in graph
@@ -66,6 +67,9 @@ double compute_kmers_present_for_node(std::vector<uint64_t> nkmers, KmerCompress
 };
 
 
+double evaluate_contiguous_matches(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci, int dataset){
+    //of the matching kmers- how many map contiguously
+};
 
 double unique_kmers_present(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci, int dataset) {
 
@@ -75,7 +79,7 @@ double unique_kmers_present(std::vector<uint64_t> nkmers, KmerCompressionIndex& 
     for (auto &kmer : nkmers) {
         // n o idea what i was doing there... it copied from abive...
         //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
-        if (kci.graph_kmers[kci.kmer_map[kmer]].count == 1) {
+        if (kci.graph_kmers[kci.kmer_map[kmer]].count ==1) {
             counter += 1;
             if (kci.read_counts[dataset][kci.kmer_map[kmer]] >
                                          0) {// should scale non uniwue kmers by number occurnces in graph
@@ -105,7 +109,7 @@ double compute_unique_kmers_for_node(std::vector<uint64_t> nkmers, KmerCompressi
     }
 
     // number of times unique kmers in this node appear in reads, scaled by total unique kmers
-    return kcov/(double)counter;
+    return kcov/((double)counter*kci.mean);
 };
 
 double read_coverage(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci, int datase){
@@ -116,7 +120,7 @@ double read_coverage(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci, in
     for (auto &kmer : nkmers){
         // n o idea what i was doing there... it copied from abive...
         //auto nk = std::lower_bound(graph_kmers.begin(), graph_kmers.end(), KmerCount(kmer,0));
-        if (kci.graph_kmers[kci.kmer_map[kmer]].count ==1) {// should scale non uniwue kmers by number occurnces in graph
+        if (kci.graph_kmers[kci.kmer_map[kmer]].count > 0) {// should scale non uniwue kmers by number occurnces in graph
             counter +=1;
             kcov+=kci.read_counts[datase][kci.kmer_map[kmer]]; // inrement coverage by count for this kmer in read set
         }
@@ -126,7 +130,7 @@ double read_coverage(std::vector<uint64_t> nkmers, KmerCompressionIndex& kci, in
     //tig as repesented in read set if more than 70%? kmers present
     // this will end up same as one of others...
     // number of times kmers in this node appear in reads, scaled by mod coverage of unique kmers
-    return kcov/(double)nkmers.size();
+    return kcov/((double)nkmers.size())*kci.mean;
 };
 
 
@@ -174,8 +178,6 @@ void CompressionAnalyzer::InitializeKCI(){
     }
     std::cout << uniqur << " of " << kci.graph_kmers.size() << " uniwue" << std::endl;
 
-    std::cout << sg.nodes.size()<< std::endl;
-    std::cout <<kci.sg.nodes.size()<< std::endl;
     std::cout << "Initialization complete" << std::endl;
 
      std::ofstream outfile_csv;
@@ -196,3 +198,85 @@ void CompressionAnalyzer::InitializeKCI(){
 
 };
 
+void  CompressionAnalyzer::UniqueContigsForLibs(std::vector<int> libs, int lib){
+
+
+
+
+// to find contigsunique to each read set, need kmers unique to each, contigs with > some % unique kmers are considered unique to that variety
+
+void  CompressionAnalyzer::UniqueKmersForLib(std::vector<int> libs, int lib){
+
+};
+
+// as need unique contigs... just getgraph kmers
+std::set<uint64_t > CompressionAnalyzer::count_kmers_from_file(std::string filename, int max_freq) {
+
+
+    FastqReader<FastqRecord> fastqReader({0},filename);
+    std::atomic<uint64_t> present(0), absent(0), rp(0);
+    std::vector<uint16_t > read_count;
+    size_t  sum = 0;
+    size_t  kmers_in_reads = 0;
+    std::unordered_map<uint64_t,uint64_t> kmer_map;
+
+#pragma omp parallel shared(fastqReader)
+    {
+        std::vector<uint16_t> thread_counts(read_count,0);
+        FastqRecord read;
+        std::vector<KmerCount> readkmers;
+        KmerCountFactory<FastqRecord> kf({31});
+
+        bool c;
+#pragma omp critical(fastqreader)
+        c = fastqReader.next_record(read);
+        while (c) {
+            readkmers.clear();
+            kf.setFileRecord(read);
+            kf.next_element(readkmers);
+
+            for (auto &rk:readkmers) {
+
+                auto findk = kmer_map.find(rk.kmer);
+                if (kmer_map.end() != findk){
+                    ++thread_counts[findk->second];
+                } else {
+                    kmer_map[rk.kmer] =(int)thread_counts.size();
+                    thread_counts.push_back(1);
+                }
+
+
+            }
+            uint64_t a=++rp;
+            if (a % 100000 == 0)
+                std::cout << rp << " reads processed " << present << " / " << present + absent << " kmers found"
+                          << std::endl;
+#pragma omp critical(fastqreader)
+            c = fastqReader.next_record(read);
+        }
+
+        //Update shared counts
+#pragma omp critical(countupdate)
+        {
+
+            for (uint64_t i=0;i<read_count.size();++i) {
+                read_count[i]+=thread_counts[i];
+                sum += thread_counts[i];
+                if (thread_counts[i] != 0){
+                    kmers_in_reads += 1;
+                }
+            }
+        }
+    }
+    std::set<uint64_t > kmers;
+    for (auto k:kmer_map){
+        auto count = read_count[k.second];
+        if (count < max_freq){
+            kmers.insert(k.first);
+        }
+    }
+
+    std::cout << rp << " reads processemers, kmers  in reads: " << kmers.size() << std::endl;
+
+    return; kmers.
+}

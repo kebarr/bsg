@@ -47,8 +47,11 @@ public:
     void CalculateRepeatCompressions();
     void InitializeCoreGenomeFinder();
     void FindCoreGenome();
+
+
 private:
     void InitializeKCI();
+        void  uniwque_kmers_for_lib(std::vector<int> libs, int lib);
 
         void Calculate(NodeCompressions & , std::string mode="analytic");
         SequenceGraph &sg;

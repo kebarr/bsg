@@ -215,6 +215,7 @@ void KmerCompressionIndex::compute_compression_stats(size_t lib) {
     while (cseen<cuniq/2) {cseen+=covuniq[median];++median;};
     uint64_t mode=0;
     for (auto i=0;i<1000;++i) if (covuniq[i]>covuniq[mode]) mode=i;
+    mean = ((double)tuniq)/cuniq;
     std::cout << "Mean coverage for unique kmers:   " << ((double)tuniq)/cuniq <<std::endl;
     std::cout << "Median coverage for unique kmers: " << median <<std::endl;
     std::cout << "Mode coverage for unique kmers:   " << mode <<std::endl;
