@@ -7,6 +7,7 @@
 #include "sglib/SequenceGraph.h"
 #include "cxxopts.hpp"
 #include <sglib/CompressionAnalyzer.h>
+#include <sglib/UniqueContigIdentifier.h>
 
 
 
@@ -18,7 +19,7 @@ int main(int argc, char * argv[]) {
     //std::cout << "Git commit: " << GIT_COMMIT_HASH << std::endl<<std::endl;
 
     std::string gfa_filename, output_prefix, gfa_list, assembly_list, mode, dump_cidx, load_cidx;
-    std::vector<std::string> reads1, reads2, reads_type, dump_mapped, load_mapped, cidxreads1, cidxreads2;
+    std::vector<std::string> reads1, reads2, reads_type, dump_mapped, load_mapped, cidxreads1, cidxreads2, graphs;
     bool stats_only = 0;
     uint64_t max_mem_gb = 4;
 
@@ -34,6 +35,8 @@ int main(int argc, char * argv[]) {
                  cxxopts::value<std::vector<std::string>>(cidxreads1))
                 ("cidxread2", "compression index input reads, right",
                  cxxopts::value<std::vector<std::string>>(cidxreads2))
+                ("graph", "graph for unique contig identification",
+                 cxxopts::value<std::vector<std::string>>(graphs))
 
                 ("mode", "kci mode",
                  cxxopts::value<std::string>(mode))
@@ -67,39 +70,45 @@ int main(int argc, char * argv[]) {
     }
 
     std::ofstream outfile;
-    outfile.open(output_prefix, std::ofstream::out |std::ofstream::app);
+    outfile.open(output_prefix, std::ofstream::out | std::ofstream::app);
     std::cout << "Executed command:" << std::endl;
-    for (auto i=0;i<argc;i++) std::cout<<argv[i]<<" ";
-    std::cout<<std::endl<<std::endl;
+    for (auto i = 0; i < argc; i++) std::cout << argv[i] << " ";
+    std::cout << std::endl << std::endl;
     for (auto i = 0; i < argc; i++) std::cout << argv[i] << " ";
     std::cout << std::endl << std::endl;
 
+    if (mode == "core") {
         auto fasta_filename = gfa_filename.substr(0, gfa_filename.size() - 4) + ".fasta";
         SequenceGraph sg;
         sg.load_from_gfa(gfa_filename);
 
         std::cout << std::endl << "=== Loading reads compression index ===" << std::endl;
-        CompressionAnalyzer ca(sg, max_mem_gb, output_prefix +"_detailed");
+        CompressionAnalyzer ca(sg, max_mem_gb, output_prefix + "_detailed");
 
-    if (load_cidx!=""){
+        if (load_cidx != "") {
             ca.InitializeLibFromDump(load_cidx);
 
 
-    } else {
-        ca.InitializeKCI();
-        for (int lib = 0; lib < cidxreads1.size(); lib++) {
+        } else {
+            ca.InitializeKCI();
+            for (int lib = 0; lib < cidxreads1.size(); lib++) {
 
-            ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
+                ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
 
 
-            if (dump_cidx != "") {
-                ca.DumpLib(dump_cidx);
+                if (dump_cidx != "") {
+                    ca.DumpLib(dump_cidx);
+                }
+                outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
+
             }
-            outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
-
         }
-    }
-    ca.FindCoreGenome();
+        ca.FindCoreGenome();
+
+    } else if (mode == "unique"){
+        UniqueContigIdentifier uci(graphs, max_mem_gb);
+        uci.GetAllUniqueContigs();
 
     }
+}
 
