@@ -96,6 +96,14 @@ void KmerCompressionIndex::load_from_disk(std::string filename) {
     inf.read(( char *) &kcount,sizeof(kcount));
     graph_kmers.resize(kcount);
     inf.read(( char *) graph_kmers.data(),sizeof(KmerCount)*kcount);
+    int counts=0;
+    for (uint64_t i=0;i<graph_kmers.size();++i) {
+        if (graph_kmers[i].count > 0){
+            counts+=1;
+        }
+        kmer_map[graph_kmers[i].kmer] = i;
+    }
+    std::cout << "loaded " << graph_kmers.size() << " graph kmers " << std::to_string(counts) << " nozero counts" << std::endl;
     //read-to-node
     uint64_t ccount;
     inf.read(( char *) &ccount,sizeof(ccount));

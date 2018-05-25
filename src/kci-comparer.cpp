@@ -17,8 +17,8 @@ int main(int argc, char * argv[]) {
     //std::cout << "Git origin: " << GIT_ORIGIN_URL << " -> "  << GIT_BRANCH << std::endl;
     //std::cout << "Git commit: " << GIT_COMMIT_HASH << std::endl<<std::endl;
 
-    std::string gfa_filename, output_prefix, load_cidx, gfa_list, assembly_list, mode;
-    std::vector<std::string> reads1, reads2, reads_type, dump_mapped, load_mapped, cidxreads1, cidxreads2, dump_cidx;
+    std::string gfa_filename, output_prefix, gfa_list, assembly_list, mode, dump_cidx, load_cidx;
+    std::vector<std::string> reads1, reads2, reads_type, dump_mapped, load_mapped, cidxreads1, cidxreads2;
     bool stats_only = 0;
     uint64_t max_mem_gb = 4;
 
@@ -38,7 +38,7 @@ int main(int argc, char * argv[]) {
                 ("mode", "kci mode",
                  cxxopts::value<std::string>(mode))
                 ("load_cidx", "load compression index filename", cxxopts::value<std::string>(load_cidx))
-                ("dump_cidx", "dump compression index filename", cxxopts::value<std::vector<std::string>>(dump_cidx))
+                ("dump_cidx", "dump compression index filename", cxxopts::value<std::string>(dump_cidx))
                 ("max_mem", "maximum_memory when mapping (GB, default: 4)", cxxopts::value<uint64_t>(max_mem_gb))
                 ("gfa_list", "list of gfas for compairson", cxxopts::value<std::string>(gfa_list));
 
@@ -82,20 +82,23 @@ int main(int argc, char * argv[]) {
         CompressionAnalyzer ca(sg, max_mem_gb, output_prefix +"_detailed");
 
     if (load_cidx!=""){
-        for (int lib = 0; lib < load_cidx.size(); lib++){
-            ca.InitializeLibFromDump(std::to_string(load_cidx[lib]));
-        }
-    }
-        for (int lib = 0; lib < cidxreads1.size(); lib++) {
-            if (dump_cidx.size() == 0) {
-                ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
-            } else {
-                ca.InitializeLib(cidxreads1[lib], cidxreads2[lib], dump_cidx[lib]);
-            }
+            ca.InitializeLibFromDump(load_cidx);
 
+
+    } else {
+        ca.InitializeKCI();
+        for (int lib = 0; lib < cidxreads1.size(); lib++) {
+
+            ca.InitializeLib(cidxreads1[lib], cidxreads2[lib]);
+
+
+            if (dump_cidx != "") {
+                ca.DumpLib(dump_cidx);
+            }
             outfile << "lib: " << lib << " " << cidxreads1[lib] << " " << cidxreads2[lib];
 
         }
+    }
     ca.FindCoreGenome();
 
     }

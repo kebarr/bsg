@@ -9,7 +9,7 @@
 CompressionAnalyzer::CompressionAnalyzer(SequenceGraph &_sg, uint64_t max_mem_gb, std::string outfile_prefix) :sg(_sg), max_mem_gb(max_mem_gb), outfile_prefix(outfile_prefix), outfile_csv_name(outfile_prefix+".csv"),kci(this->sg, this->max_mem_gb*1024L*1024L*1024L),
                                                                                                                ra(this->sg, this->kci), cgf(this->sg, this->kci, CoreGenomeParams()){
 
-    InitializeKCI();
+    //nitializeKCI();
 
 };
 
@@ -40,6 +40,14 @@ void CompressionAnalyzer::InitializeLib(std::string lib_name_r1, std::string lib
     if (save_to != ""){
         kci.save_to_disk(save_to, nc.index);
     }
+
+};
+
+void CompressionAnalyzer::DumpLib(std::string save_to) {
+    std::cout << "save to: " << save_to << std::endl;
+
+        kci.save_to_disk(save_to);
+
 
 };
 
@@ -198,18 +206,19 @@ void CompressionAnalyzer::InitializeKCI(){
 
 };
 
-void  CompressionAnalyzer::UniqueContigsForLibs(std::vector<int> libs, int lib){
+//void  CompressionAnalyzer::UniqueContigsForLibs(std::vector<int> libs, int lib){
 
 
 
 
 // to find contigsunique to each read set, need kmers unique to each, contigs with > some % unique kmers are considered unique to that variety
 
-void  CompressionAnalyzer::UniqueKmersForLib(std::vector<int> libs, int lib){
+//void  CompressionAnalyzer::UniqueKmersForLib(std::vector<int> libs, int lib){
 
-};
+//};
 
 // as need unique contigs... just getgraph kmers
+/*
 std::set<uint64_t > CompressionAnalyzer::count_kmers_from_file(std::string filename, int max_freq) {
 
 
@@ -280,3 +289,4 @@ std::set<uint64_t > CompressionAnalyzer::count_kmers_from_file(std::string filen
 
     return; kmers.
 }
+*/
