@@ -10,16 +10,17 @@ CoreGenomeFinder::CoreGenomeFinder(SequenceGraph& _sg, KmerCompressionIndex& _kc
 void CoreGenomeFinder::InitialiseNodeMetrics() {
     std::cout << "Initialising Node Metrics for " << sg.nodes.size() << " nodes" << std::endl;
     int count = 0;
-    int candidate_count = 0;
-    int seq_len = 0;
-    int candidate_seq_len = 0;
-    for (auto node:sg.nodes) {
+   // int seq_len = 0;
+
+#pragma omp parallel for
+    for (int i = 0 ; i <sg.nodes.size() ; i++) {
+        auto node = sg.nodes[i];
         if (count % 10000 == 0){
-            std::cout << "Initialized metrics for " << std::to_string(count) << " nodes, of which " <<  std::to_string(candidate_count) << " are candidates for core genomes"<< std::endl;
+            std::cout << "Initialized metrics for " << std::to_string(count) << " nodes, of which " <<  std::to_string(count) << " are candidates for core genomes"<< std::endl;
         }
         std::vector<uint64_t> nkmers;
         StringKMerFactory skf(node.sequence, 31);
-        seq_len += node.sequence.size();
+        //seq_len += node.sequence.size();
         nkmers.reserve(node.sequence.size());
         skf.create_kmers(nkmers);
 
@@ -38,20 +39,18 @@ void CoreGenomeFinder::InitialiseNodeMetrics() {
             out_contigs.push_back(c.dest);
         }*/
         NodeMetrics nm(kci, nkmers, node, count, gcp, in_contigs, out_contigs);
-
+#pragma omp critical(nm)
+{
         nms.push_back(nm);
-        if (nm.candidate_core) {
             candidates.push_back(nm.id);
-            candidate_count += 1;
-            candidate_seq_len += node.sequence.size();
 
-
-        }
         count += 1;
     }
+
+    };
         this->candidates = candidates;
-        std::cout << "found " << candidate_count << " candidate core genome nodes with  seq len " << candidate_seq_len
-                  << " out of " << seq_len << " bases in graph" << std::endl;
+        std::cout << "found " << count << " candidate core genome nodes with  seq len " <<
+                   std::endl;
 
 };
 
