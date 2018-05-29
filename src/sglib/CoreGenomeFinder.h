@@ -44,7 +44,7 @@ struct NodeMetrics{
     std::vector<std::vector<double> > lib_vals;
     NodeMetrics(KmerCompressionIndex kci, std::vector<uint64_t> nkmers, Node & _node, sgNodeID_t _id, CoreGenomeParams _gcp, std::vector<sgNodeID_t> _in_contigs, std::vector<sgNodeID_t> _out_contigs):
             node(_node), id(_id), kmers(nkmers), sequence_length(this->node.sequence.size()), gcp(_gcp), in_contigs(_in_contigs), out_contigs(_out_contigs){
-        unique_kmer_mask.resize(nkmers.size());
+        /*(unique_kmer_mask.resize(nkmers.size());
         int counter = 0;
         int i = 0;
         for (auto &kmer : nkmers){
@@ -65,8 +65,8 @@ struct NodeMetrics{
         }
         double unique_kmers = counter/(double)nkmers.size();
         if (sequence_length > gcp.sequence_length_thresh && in_contigs.size() + out_contigs.size() >= gcp.min_links && unique_kmers > gcp.kmer_thresh ){
-            candidate_core = true;
-        }
+            */candidate_core = true;
+        //}
     }
 
     void add_metric(int i){

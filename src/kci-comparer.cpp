@@ -107,7 +107,14 @@ int main(int argc, char * argv[]) {
 
     } else if (mode == "unique"){
         UniqueContigIdentifier uci(graphs, max_mem_gb);
-        uci.GetAllUniqueContigs();
+        uci.GetAllUniqueContigs(0.8);
+        uci.WriteAllUniqueContentToFasta();
+        uci.SummarizeVars();
+
+    }else if (mode == "core2"){
+        UniqueContigIdentifier uci(graphs, max_mem_gb);
+        uci.GetAllUniqueContigs(0.8);
+        uci.WriteAllUniqueContentToFasta();
 
     }
 }

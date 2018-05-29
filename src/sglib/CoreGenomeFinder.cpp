@@ -14,6 +14,9 @@ void CoreGenomeFinder::InitialiseNodeMetrics() {
     int seq_len = 0;
     int candidate_seq_len = 0;
     for (auto node:sg.nodes) {
+        if (count % 10000 == 0){
+            std::cout << "Initialized metrics for " << std::to_string(count) << " nodes, of which " <<  std::to_string(candidate_count) << " are candidates for core genomes"<< std::endl;
+        }
         std::vector<uint64_t> nkmers;
         StringKMerFactory skf(node.sequence, 31);
         seq_len += node.sequence.size();
@@ -22,7 +25,7 @@ void CoreGenomeFinder::InitialiseNodeMetrics() {
 
         std::vector<sgNodeID_t> in_contigs;
         std::vector<sgNodeID_t> out_contigs;
-        auto in = sg.get_bw_links(count);
+        /*auto in = sg.get_bw_links(count);
         for (auto c:in) {
 
             in_contigs.push_back(c.dest);
@@ -33,7 +36,7 @@ void CoreGenomeFinder::InitialiseNodeMetrics() {
         for (auto c:out) {
 
             out_contigs.push_back(c.dest);
-        }
+        }*/
         NodeMetrics nm(kci, nkmers, node, count, gcp, in_contigs, out_contigs);
 
         nms.push_back(nm);
